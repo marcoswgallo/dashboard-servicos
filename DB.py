@@ -43,7 +43,6 @@ class DatabaseConnection:
         except:
             return None
 
-    @st.cache_data(ttl=300)  # Cache por 5 minutos
     def execute_query(self, data_inicio, data_fim):
         """
         Executa query no banco de dados.
@@ -55,37 +54,49 @@ class DatabaseConnection:
         Returns:
             DataFrame: Resultado da query ou None se houver erro
         """
+        @st.cache_data(ttl=300)  # Cache por 5 minutos
+        def fetch_data(_supabase, _data_inicio, _data_fim):
+            try:
+                with st.spinner('🔄 Carregando dados do banco...'):
+                    # Fazer a consulta usando a API do Supabase com paginação
+                    all_data = []
+                    page = 1
+                    page_size = 10000  # Aumentado para 10k registros por página
+                    
+                    while True:
+                        # Calcular o offset
+                        offset = (page - 1) * page_size
+                        
+                        # Fazer a consulta para a página atual
+                        response = _supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
+                        
+                        if not response.data:
+                            break
+                            
+                        all_data.extend(response.data)
+                        
+                        # Atualizar progresso
+                        st.write(f"📥 Carregados {len(all_data):,} registros...")
+                        
+                        # Se retornou menos que page_size registros, chegamos ao fim
+                        if len(response.data) < page_size:
+                            break
+                            
+                        page += 1
+                
+                return all_data
+                    
+            except Exception as e:
+                st.error(f"Erro ao carregar dados: {str(e)}")
+                return None
+        
         try:
             if self.supabase is None:
                 st.error("Cliente Supabase não inicializado")
                 return None
             
-            with st.spinner('🔄 Carregando dados do banco...'):
-                # Fazer a consulta usando a API do Supabase com paginação
-                all_data = []
-                page = 1
-                page_size = 10000  # Aumentado para 10k registros por página
-                
-                while True:
-                    # Calcular o offset
-                    offset = (page - 1) * page_size
-                    
-                    # Fazer a consulta para a página atual
-                    response = self.supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
-                    
-                    if not response.data:
-                        break
-                        
-                    all_data.extend(response.data)
-                    
-                    # Atualizar progresso
-                    st.write(f"📥 Carregados {len(all_data):,} registros...")
-                    
-                    # Se retornou menos que page_size registros, chegamos ao fim
-                    if len(response.data) < page_size:
-                        break
-                        
-                    page += 1
+            # Buscar dados com cache
+            all_data = fetch_data(self.supabase, data_inicio, data_fim)
             
             if not all_data:
                 st.warning("Nenhum dado encontrado na tabela Basic")
