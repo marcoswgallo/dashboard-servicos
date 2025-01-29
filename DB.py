@@ -1,56 +1,32 @@
-import psycopg2
 import pandas as pd
 import streamlit as st
+from supabase import create_client
 
 class DatabaseConnection:
     def __init__(self):
-        self.connection = None
-        self.cursor = None
-        self.config = {
-            "dbname": st.secrets["dbname"],
-            "user": st.secrets["user"],
-            "password": st.secrets["password"],
-            "host": st.secrets["host"],
-            "port": st.secrets["port"],
-            "connect_timeout": st.secrets.get("connect_timeout", 10)
-        }
-
-    def connect(self):
+        self.supabase = None
         try:
-            self.connection = psycopg2.connect(**self.config)
-            self.cursor = self.connection.cursor()
-            return True
+            url = st.secrets["supabase"]["url"]
+            key = st.secrets["supabase"]["key"]
+            self.supabase = create_client(url, key)
         except Exception as e:
-            st.error(f"Erro ao conectar ao banco: {str(e)}")
-            return False
-
-    def disconnect(self):
-        try:
-            if self.cursor:
-                self.cursor.close()
-            if self.connection:
-                self.connection.close()
-        except Exception as e:
-            st.error(f"Erro ao desconectar: {str(e)}")
+            st.error(f"Erro ao inicializar cliente Supabase: {str(e)}")
 
     def execute_query(self, query):
         try:
-            if not self.connect():
+            if self.supabase is None:
                 return None
-
-            self.cursor.execute(query)
-            columns = [desc[0] for desc in self.cursor.description]
-            data = self.cursor.fetchall()
+                
+            # Executar a query usando o cliente Supabase
+            response = self.supabase.rpc('execute_sql', {'query': query}).execute()
             
-            if data:
-                df = pd.DataFrame(data, columns=columns)
+            if response.data:
+                df = pd.DataFrame(response.data)
                 return df
             return None
         except Exception as e:
             st.error(f"Erro ao executar query: {str(e)}")
             return None
-        finally:
-            self.disconnect()
 
     def get_table_names(self) -> list:
         query = """
