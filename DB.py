@@ -16,13 +16,13 @@ class DatabaseConnection:
                 st.error("❌ Configuração 'postgres' não encontrada nos secrets")
                 return
             
-            # Configurações do banco
+            # Configurações do banco usando os secrets
             self.config = {
-                'dbname': 'postgres',
-                'user': 'postgres.vdmzeeewpzfpgmnaabfw',
-                'password': 'RNupTzhk6d-3SZC',
-                'host': 'aws-0-sa-east-1.pooler.supabase.com',
-                'port': 6543,
+                'dbname': st.secrets.postgres.database,
+                'user': st.secrets.postgres.user,
+                'password': st.secrets.postgres.password,
+                'host': st.secrets.postgres.host,
+                'port': st.secrets.postgres.port,
                 'connect_timeout': 10
             }
             
@@ -34,7 +34,7 @@ class DatabaseConnection:
             
         except Exception as e:
             st.error(f"❌ Erro ao carregar configurações: {str(e)}")
-            raise e
+            self.config = None
 
     def connect(self):
         try:
