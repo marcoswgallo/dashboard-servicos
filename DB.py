@@ -127,11 +127,15 @@ class DatabaseConnection:
                         # Calcular o offset
                         offset = (page - 1) * page_size
                         
+                        # Debug da paginação
+                        st.write(f"DEBUG - Carregando página {page} (offset: {offset}, limit: {page_size})")
+                        
                         # Fazer a consulta para a página atual com filtro de data
                         response = (_supabase.table('Basic')
                                   .select('*')
                                   .gte('DATA', data_inicio_str)
                                   .lte('DATA', data_fim_str)
+                                  .order('DATA')  # Ordenar por data para garantir consistência
                                   .range(offset, offset + page_size - 1)
                                   .execute())
                         
@@ -141,17 +145,22 @@ class DatabaseConnection:
                         elif page == 1:
                             st.write(f"DEBUG - Primeira data encontrada: {response.data[0]['DATA']}")
                             st.write(f"DEBUG - Última data encontrada: {response.data[-1]['DATA']}")
+                            st.write(f"DEBUG - Total de registros na primeira página: {len(response.data)}")
                         
                         if not response.data:
+                            if page == 1:
+                                st.warning("Nenhum registro encontrado para o período")
                             break
                             
                         all_data.extend(response.data)
+                        current_page_size = len(response.data)
                         
                         # Atualizar progresso
                         st.write(f"📥 Carregados {len(all_data):,} registros...")
                         
                         # Se retornou menos que page_size registros, chegamos ao fim
-                        if len(response.data) < page_size:
+                        if current_page_size < page_size:
+                            st.write(f"DEBUG - Última página carregada com {current_page_size} registros")
                             break
                             
                         page += 1
