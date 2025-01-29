@@ -44,31 +44,31 @@ df = db.execute_query(data_inicio, data_fim)
 # Filtros adicionais na sidebar
 col1, col2 = st.sidebar.columns(2)
 
-# Inicializar listas vazias para os filtros
-cidades = []
-tecnicos = []
-
 # Só mostrar os filtros se tiver dados
-if df is not None and not df.empty:
+if not df.empty:
+    # Remover valores nulos antes de usar unique() e sort
+    cidades_unicas = df["CIDADES"].dropna().unique().tolist()
+    tecnicos_unicos = df["TECNICO"].dropna().unique().tolist()
+    
     with col1:
         cidades = st.multiselect(
             "🏙️ Cidades:",
-            options=sorted(df['CIDADES'].unique().tolist()),
+            options=sorted(cidades_unicas),
             default=[]
         )
     
     with col2:
         tecnicos = st.multiselect(
             "👨‍🔧 Técnicos:",
-            options=sorted(df['TECNICO'].unique().tolist()),
+            options=sorted(tecnicos_unicos),
             default=[]
         )
 
     # Aplicar filtros
     if cidades:
-        df = df[df['CIDADES'].isin(cidades)]
+        df = df[df["CIDADES"].isin(cidades)]
     if tecnicos:
-        df = df[df['TECNICO'].isin(tecnicos)]
+        df = df[df["TECNICO"].isin(tecnicos)]
 
     # Criar mapa base
     m = folium.Map(
@@ -76,17 +76,17 @@ if df is not None and not df.empty:
         zoom_start=10
     )
 
-    # Adicionar marcadores
+    # Adicionar marcadores apenas para coordenadas válidas
     for idx, row in df.iterrows():
-        if pd.notna(row['LATIDUDE']) and pd.notna(row['LONGITUDE']):
+        if pd.notna(row["LATIDUDE"]) and pd.notna(row["LONGITUDE"]):
             folium.Marker(
-                [row['LATIDUDE'], row['LONGITUDE']],
+                [row["LATIDUDE"], row["LONGITUDE"]],
                 popup=f"""
-                <b>Cidade:</b> {row['CIDADES']}<br>
-                <b>Técnico:</b> {row['TECNICO']}<br>
-                <b>Data:</b> {row['DATA_TOA'].strftime('%d/%m/%Y %H:%M')}<br>
-                <b>Serviço:</b> {row['SERVIÇO']}<br>
-                <b>Status:</b> {row['STATUS']}<br>
+                <b>Cidade:</b> {row["CIDADES"] if pd.notna(row["CIDADES"]) else "N/A"}<br>
+                <b>Técnico:</b> {row["TECNICO"] if pd.notna(row["TECNICO"]) else "N/A"}<br>
+                <b>Data:</b> {row["DATA_TOA"].strftime("%d/%m/%Y %H:%M") if pd.notna(row["DATA_TOA"]) else "N/A"}<br>
+                <b>Serviço:</b> {row["SERVIÇO"] if pd.notna(row["SERVIÇO"]) else "N/A"}<br>
+                <b>Status:</b> {row["STATUS"] if pd.notna(row["STATUS"]) else "N/A"}<br>
                 """
             ).add_to(m)
 
@@ -101,15 +101,14 @@ if df is not None and not df.empty:
         st.metric("Total de Serviços", len(df))
     
     with col2:
-        st.metric("Cidades Atendidas", len(df['CIDADES'].unique()))
+        st.metric("Cidades Atendidas", len(df["CIDADES"].dropna().unique()))
     
     with col3:
-        st.metric("Técnicos Ativos", len(df['TECNICO'].unique()))
+        st.metric("Técnicos Ativos", len(df["TECNICO"].dropna().unique()))
     
     with col4:
-        concluidos = len(df[df['STATUS'].str.contains('Concluído', case=False, na=False)])
+        concluidos = len(df[df["STATUS"].str.contains("Concluído", case=False, na=False)])
         st.metric("Serviços Concluídos", concluidos)
 
 else:
-    # Mostrar mensagem quando não há dados
     st.warning("⚠️ Nenhum dado encontrado para o período selecionado. Tente ajustar as datas do filtro.")

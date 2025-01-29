@@ -41,8 +41,8 @@ class DatabaseConnection:
                     first_date = result[0]
                     last_date = result[1]
                     
-                    st.info(f"📅 Dados disponíveis de {first_date.strftime('%d/%m/%Y %H:%M')} "
-                           f"até {last_date.strftime('%d/%m/%Y %H:%M')}")
+                    st.info(f"📅 Dados disponíveis de {first_date.strftime(\"%d/%m/%Y %H:%M\")} "
+                           f"até {last_date.strftime(\"%d/%m/%Y %H:%M\")}")
                 else:
                     st.warning("⚠️ Não foi possível determinar o range de datas disponível")
                 
@@ -54,10 +54,10 @@ class DatabaseConnection:
         try:
             # Tenta diferentes formatos de data
             formats = [
-                '%d/%m/%Y',
-                '%d/%m/%Y %H:%M',
-                '%Y-%m-%d',
-                '%Y-%m-%d %H:%M:%S'
+                "%d/%m/%Y",
+                "%d/%m/%Y %H:%M",
+                "%Y-%m-%d",
+                "%Y-%m-%d %H:%M:%S"
             ]
             
             for fmt in formats:
@@ -74,13 +74,17 @@ class DatabaseConnection:
     
     def execute_query(self, start_date, end_date):
         """Executa query no banco de dados."""
+        # Define as colunas padrão para DataFrame vazio
+        empty_df = pd.DataFrame(columns=["DATA_TOA", "TECNICO", "CIDADES", "SERVIÇO", "STATUS", "LATIDUDE", "LONGITUDE"])
+        
         try:
             # Converter datas
             start = self.parse_date(start_date)
             end = self.parse_date(end_date)
             
             if not start or not end:
-                return None
+                st.warning("⚠️ Datas inválidas fornecidas.")
+                return empty_df
             
             # Ajustar end_date para incluir todo o dia
             if len(end_date) <= 10:  # Se não tem hora
@@ -91,7 +95,7 @@ class DatabaseConnection:
                 SELECT *
                 FROM basic
                 WHERE "DATA_TOA"::timestamp 
-                    BETWEEN :start_date AND :end_date
+                    BETWEEN %(start_date)s AND %(end_date)s
                 ORDER BY "DATA_TOA"
             """)
             
@@ -101,21 +105,21 @@ class DatabaseConnection:
                     query,
                     conn,
                     params={
-                        'start_date': start,
-                        'end_date': end
+                        "start_date": start.strftime("%Y-%m-%d %H:%M:%S"),
+                        "end_date": end.strftime("%Y-%m-%d %H:%M:%S")
                     },
-                    parse_dates=['DATA_TOA']
+                    parse_dates=["DATA_TOA"]
                 )
             
             if result.empty:
-                st.warning("Nenhum dado encontrado para o período selecionado.")
-                return None
+                st.warning("⚠️ Nenhum dado encontrado para o período selecionado.")
+                return empty_df
             
             return result
             
         except Exception as e:
-            st.error(f"Erro ao carregar dados: {str(e)}")
-            return None
+            st.error(f"❌ Erro ao carregar dados: {str(e)}")
+            return empty_df
     
     def get_table_names(self):
         """Retorna lista de tabelas no banco."""
@@ -124,7 +128,7 @@ class DatabaseConnection:
                 query = text("""
                     SELECT table_name 
                     FROM information_schema.tables 
-                    WHERE table_schema = 'public'
+                    WHERE table_schema = "public"
                 """)
                 result = conn.execute(query)
                 return [row[0] for row in result]
