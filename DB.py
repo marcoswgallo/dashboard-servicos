@@ -7,9 +7,8 @@ class DatabaseConnection:
     def __init__(self):
         try:
             # Tentar carregar as configurações
-            st.write("Verificando configurações...")
             if 'postgres' not in st.secrets:
-                st.error("Configuração 'postgres' não encontrada nos secrets")
+                st.error("❌ Configuração 'postgres' não encontrada nos secrets")
                 return
             
             # Configurações do banco
@@ -18,13 +17,12 @@ class DatabaseConnection:
                 'user': st.secrets.postgres.user,
                 'password': st.secrets.postgres.password,
                 'host': st.secrets.postgres.host,
-                'port': st.secrets.postgres.port
+                'port': st.secrets.postgres.port,
+                'connect_timeout': 10  # Timeout de 10 segundos
             }
             
-            st.write(f"Tentando conectar em: {self.config['host']}:{self.config['port']}/{self.config['dbname']} com usuário {self.config['user']}")
-            
         except Exception as e:
-            st.error(f"Erro ao carregar configurações: {str(e)}")
+            st.error(f"❌ Erro ao carregar configurações: {str(e)}")
             raise e
         
         self.conn = None
@@ -32,19 +30,29 @@ class DatabaseConnection:
 
     def connect(self):
         try:
-            st.write("Iniciando conexão...")
-            self.conn = psycopg2.connect(
-                dbname=self.config['dbname'],
-                user=self.config['user'],
-                password=self.config['password'],
-                host=self.config['host'],
-                port=self.config['port']
-            )
-            self.cursor = self.conn.cursor()
-            st.success("✅ Conexão bem sucedida!")
+            # Tentar conexão direta primeiro
+            try:
+                self.conn = psycopg2.connect(**self.config)
+                self.cursor = self.conn.cursor()
+                return True
+            except psycopg2.OperationalError as e:
+                # Se falhar, tentar conexão alternativa
+                st.warning("⚠️ Tentando conexão alternativa...")
+                alt_config = {
+                    'dbname': 'postgres',
+                    'user': 'postgres',
+                    'password': 'Basic@2024',
+                    'host': 'db.vdmzeeewpzfpgmnaabfw.supabase.co',
+                    'port': 5432,
+                    'connect_timeout': 10
+                }
+                self.conn = psycopg2.connect(**alt_config)
+                self.cursor = self.conn.cursor()
+                return True
+                
         except Exception as e:
             st.error(f"❌ Erro ao conectar ao banco de dados: {str(e)}")
-            raise e
+            return False
 
     def disconnect(self):
         try:
@@ -52,19 +60,18 @@ class DatabaseConnection:
                 self.cursor.close()
             if self.conn:
                 self.conn.close()
-                st.write("Conexão encerrada!")
         except Exception as e:
             st.error(f"Erro ao desconectar: {str(e)}")
 
     def execute_query(self, query: str) -> Optional[pd.DataFrame]:
         try:
-            st.write("Executando query...")
-            self.connect()
+            if not self.connect():
+                return None
+                
             self.cursor.execute(query)
             columns = [desc[0] for desc in self.cursor.description]
             data = self.cursor.fetchall()
             df = pd.DataFrame(data, columns=columns)
-            st.success("✅ Query executada com sucesso!")
             return df
         except Exception as e:
             st.error(f"❌ Erro ao executar query: {str(e)}")
