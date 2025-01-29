@@ -2,27 +2,32 @@ import psycopg2
 import pandas as pd
 from typing import Optional
 import streamlit as st
-from urllib.parse import quote_plus
+from supabase import create_client, Client
 
 class DatabaseConnection:
     def __init__(self):
         self.conn = None
         self.cursor = None
-        self.config = None
+        self.supabase: Optional[Client] = None
         
         try:
             # Tentar carregar as configurações
-            if 'postgres' not in st.secrets:
-                st.error("❌ Configuração 'postgres' não encontrada nos secrets")
+            if 'supabase' not in st.secrets:
+                st.error("❌ Configuração 'supabase' não encontrada nos secrets")
                 return
             
-            # Configurações do banco usando os secrets
+            # Inicializar cliente Supabase
+            supabase_url = st.secrets.supabase.url
+            supabase_key = st.secrets.supabase.key
+            self.supabase = create_client(supabase_url, supabase_key)
+            
+            # Configurações do banco
             self.config = {
-                'dbname': st.secrets.postgres.database,
-                'user': st.secrets.postgres.user,
-                'password': st.secrets.postgres.password,
-                'host': st.secrets.postgres.host,
-                'port': st.secrets.postgres.port,
+                'dbname': 'postgres',
+                'user': 'postgres.vdmzeeewpzfpgmnaabfw',
+                'password': 'RNupTzhk6d-3SZC',
+                'host': 'aws-0-sa-east-1.pooler.supabase.com',
+                'port': 6543,
                 'connect_timeout': 10
             }
             
@@ -67,6 +72,18 @@ class DatabaseConnection:
             st.write("Executando query:")
             st.code(query, language='sql')
             
+            # Usar Supabase se disponível
+            if self.supabase:
+                try:
+                    response = self.supabase.rpc('execute_sql', {'sql_query': query}).execute()
+                    if response.data:
+                        df = pd.DataFrame(response.data)
+                        st.write(f"Registros retornados: {len(df)}")
+                        return df
+                except Exception as e:
+                    st.warning(f"⚠️ Erro ao usar Supabase, tentando conexão direta: {str(e)}")
+            
+            # Fallback para conexão direta
             if not self.connect():
                 st.error("❌ Não foi possível estabelecer conexão com o banco")
                 return None
