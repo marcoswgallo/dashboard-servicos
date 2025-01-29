@@ -213,11 +213,35 @@ if df is not None:
     if status:
         df_filtered = df_filtered[df_filtered['STATUS'].isin(status)]
 
-    # Remover linhas com coordenadas nulas ou inválidas
-    df_map = df_filtered.dropna(subset=['LATIDUDE', 'LONGITUDE'])
+    # Filtros e processamento
+    df_map = df_filtered.copy()
     
-    # Verificar se há dados para mostrar
+    # Debug - mostrar alguns dados antes do filtro
+    st.write("Exemplo de coordenadas antes do filtro:")
+    st.write(df_map[['LATIDUDE', 'LONGITUDE']].head())
+    
+    # Remover linhas sem coordenadas
+    df_map = df_map[df_map['LATIDUDE'].notna() & df_map['LONGITUDE'].notna()]
+    
+    # Debug - mostrar quantidade após filtro
+    st.write(f"Registros com coordenadas válidas: {len(df_map)}")
+    
     if not df_map.empty:
+        # Debug - mostrar range de coordenadas
+        st.write("Range de coordenadas:")
+        st.write({
+            'LATIDUDE': {
+                'min': df_map['LATIDUDE'].min(),
+                'max': df_map['LATIDUDE'].max(),
+                'mean': df_map['LATIDUDE'].mean()
+            },
+            'LONGITUDE': {
+                'min': df_map['LONGITUDE'].min(),
+                'max': df_map['LONGITUDE'].max(),
+                'mean': df_map['LONGITUDE'].mean()
+            }
+        })
+
         # Seletor de estilo do mapa
         col1, col2 = st.columns(2)
         with col1:
