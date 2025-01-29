@@ -13,19 +13,6 @@ class DatabaseConnection:
         except Exception as e:
             st.error(f"Erro ao inicializar cliente Supabase: {str(e)}")
 
-    def parse_date(self, date_str):
-        """Tenta converter string para data em diferentes formatos."""
-        try:
-            # Primeiro tenta com hora
-            return pd.to_datetime(date_str, format='%d/%m/%Y %H:%M')
-        except:
-            try:
-                # Se falhar, tenta só com data
-                return pd.to_datetime(date_str, format='%d/%m/%Y')
-            except:
-                # Se ainda falhar, retorna None
-                return None
-
     def execute_query(self, query_params):
         try:
             if self.supabase is None:
@@ -44,11 +31,14 @@ class DatabaseConnection:
                 
             df = pd.DataFrame(response.data)
             
-            # Converter a coluna DATA para datetime usando o parser personalizado
-            df['DATA'] = df['DATA'].apply(self.parse_date)
+            # Debug: mostrar alguns exemplos de datas
+            st.write("Exemplos de datas no banco:", df['DATA'].head().tolist())
             
-            # Remover linhas onde a data não pôde ser convertida
-            df = df.dropna(subset=['DATA'])
+            # Converter a coluna DATA para datetime usando parser flexível
+            df['DATA'] = pd.to_datetime(df['DATA'], format='mixed', dayfirst=True)
+            
+            # Debug: mostrar datas convertidas
+            st.write("Exemplos de datas convertidas:", df['DATA'].head().dt.strftime('%Y-%m-%d %H:%M').tolist())
             
             # Filtrar por data
             data_limite = pd.to_datetime(data_limite)
@@ -68,6 +58,10 @@ class DatabaseConnection:
             st.error("Detalhes do erro para debug:")
             st.error(str(e.__class__.__name__))
             st.error(str(e.__dict__))
+            # Debug: mostrar o tipo de dados que estamos tentando converter
+            if 'df' in locals():
+                st.write("Tipo de dados na coluna DATA:", df['DATA'].dtype)
+                st.write("Primeiros valores da coluna DATA:", df['DATA'].head().tolist())
             return None
 
     def get_table_names(self) -> list:
