@@ -43,6 +43,7 @@ class DatabaseConnection:
         except:
             return None
 
+    @st.cache_data(ttl=300)  # Cache por 5 minutos
     def execute_query(self, data_inicio, data_fim):
         """
         Executa query no banco de dados.
@@ -59,31 +60,44 @@ class DatabaseConnection:
                 st.error("Cliente Supabase não inicializado")
                 return None
             
+            # Lista de colunas necessárias
+            colunas = [
+                'DATA', 'BASE', 'SERVIÇO', 'STATUS', 'CIDADES', 'LATIDUDE', 'LONGITUDE',
+                'TECNICO', 'VALOR TÉCNICO', 'VALOR EMPRESA', 'OS'
+            ]
+            
             # Fazer a consulta usando a API do Supabase com paginação
             all_data = []
             page = 1
-            page_size = 1000
+            page_size = 5000  # Aumentado para 5000 registros por página
             
-            while True:
-                # Calcular o offset
-                offset = (page - 1) * page_size
-                
-                # Fazer a consulta para a página atual
-                response = self.supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
-                
-                if not response.data:
-                    break
+            with st.spinner('🔄 Carregando dados...'):
+                while True:
+                    # Calcular o offset
+                    offset = (page - 1) * page_size
                     
-                all_data.extend(response.data)
-                
-                # Se retornou menos que page_size registros, chegamos ao fim
-                if len(response.data) < page_size:
-                    break
+                    # Fazer a consulta para a página atual com filtro de data
+                    response = (self.supabase
+                              .table('Basic')
+                              .select(','.join(colunas))
+                              .gte('DATA', data_inicio)
+                              .lte('DATA', data_fim)
+                              .range(offset, offset + page_size - 1)
+                              .execute())
                     
-                page += 1
+                    if not response.data:
+                        break
+                        
+                    all_data.extend(response.data)
+                    
+                    # Se retornou menos que page_size registros, chegamos ao fim
+                    if len(response.data) < page_size:
+                        break
+                        
+                    page += 1
             
             if not all_data:
-                st.warning("Nenhum dado encontrado na tabela Basic")
+                st.warning("Nenhum dado encontrado para o período selecionado")
                 return None
             
             # Converter para DataFrame
@@ -103,14 +117,8 @@ class DatabaseConnection:
             # Converter data para datetime
             df['DATA'] = df['DATA'].apply(self.convert_date)
             
-            # Remover registros com data inválida
-            df = df.dropna(subset=['DATA'])
-            
-            # Filtrar por data
-            data_inicio_dt = pd.to_datetime(data_inicio)
-            data_fim_dt = pd.to_datetime(data_fim)
-            df = df[(df['DATA'].dt.date >= data_inicio_dt.date()) & 
-                   (df['DATA'].dt.date <= data_fim_dt.date())]
+            # Remover registros com data inválida ou coordenadas nulas
+            df = df.dropna(subset=['DATA', 'LATIDUDE', 'LONGITUDE'])
             
             # Ordenar por data
             df = df.sort_values('DATA', ascending=False)
@@ -124,11 +132,7 @@ class DatabaseConnection:
                 'STATUS': ''
             })
             
-            if len(df) == 0:
-                st.warning("Nenhum dado encontrado para o período selecionado")
-                return None
-            
-            st.info(f"📊 Total de registros carregados: {len(df):,}")
+            st.success(f"✅ {len(df):,} registros carregados com sucesso!")
             return df
                 
         except Exception as e:
