@@ -21,26 +21,32 @@ with st.container():
     col1, col2 = st.columns([2,2])
     
     with col1:
-        data_fim = st.date_input(
-            "📅 Data Final:",
-            value=datetime.now(),
-            max_value=datetime.now(),
-            help="Data final do período de análise"
-        )
-        data_inicio = st.date_input(
+        data_inicial = st.text_input(
             "📅 Data Inicial:",
-            value=data_fim - timedelta(days=30),
-            max_value=data_fim,
-            help="Data inicial do período de análise"
+            value=datetime.now().strftime("%d/%m/%Y"),
+            help="Digite a data inicial no formato DD/MM/YYYY"
+        )
+        data_final = st.text_input(
+            "📅 Data Final:",
+            value=datetime.now().strftime("%d/%m/%Y"),
+            help="Digite a data final no formato DD/MM/YYYY"
         )
 
+    # Converter datas para o formato ISO antes de passar para o DB
+    try:
+        data_inicial_iso = datetime.strptime(data_inicial, "%d/%m/%Y").strftime("%Y-%m-%d")
+        data_final_iso = datetime.strptime(data_final, "%d/%m/%Y").strftime("%Y-%m-%d")
+    except ValueError as e:
+        st.error("⚠️ Por favor, digite as datas no formato DD/MM/YYYY")
+        st.stop()
+
     # Calcular datas limite
-    data_inicio_str = data_inicio.strftime("%Y-%m-%d")
-    data_fim_str = data_fim.strftime("%Y-%m-%d")
+    #data_inicio_str = data_inicio.strftime("%Y-%m-%d")
+    #data_fim_str = data_fim.strftime("%Y-%m-%d")
     
     # Carregar dados
     db = DatabaseConnection()
-    df = db.execute_query(data_inicio_str, data_fim_str)
+    df = db.execute_query(data_inicial_iso, data_final_iso)
     
     if df is not None:
         # Remover linhas com coordenadas nulas ou inválidas
