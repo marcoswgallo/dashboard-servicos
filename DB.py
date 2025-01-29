@@ -72,9 +72,18 @@ class DatabaseConnection:
             # Converter para DataFrame
             df = pd.DataFrame(response.data)
             
+            # Debug: mostrar colunas disponíveis
+            st.write("Colunas disponíveis:", df.columns.tolist())
+            
             # Converter valores monetários
-            df['VALOR_TÉCNICO'] = df['VALOR_TÉCNICO'].apply(self.convert_value)
-            df['VALOR_EMPRESA'] = df['VALOR_EMPRESA'].apply(self.convert_value)
+            df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.convert_value)
+            df['VALOR_EMPRESA'] = df['VALOR EMPRESA'].apply(self.convert_value)
+            
+            # Renomear colunas com espaço
+            df = df.rename(columns={
+                'VALOR TÉCNICO': 'VALOR_TÉCNICO',
+                'VALOR EMPRESA': 'VALOR_EMPRESA'
+            })
             
             # Converter coordenadas para float
             df['LATIDUDE'] = pd.to_numeric(df['LATIDUDE'], errors='coerce')
