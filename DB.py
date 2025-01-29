@@ -25,7 +25,7 @@ class DatabaseConnection:
         try:
             with self.conn.cursor() as cur:
                 # Buscar primeira data
-                cur.execute("SELECT MIN(data) as first_date, MAX(data) as last_date FROM basic")
+                cur.execute('SELECT MIN("DATA") as first_date, MAX("DATA") as last_date FROM basic')
                 result = cur.fetchone()
                 
                 if result and result['first_date'] and result['last_date']:
@@ -94,8 +94,8 @@ class DatabaseConnection:
                     query = """
                     SELECT *
                     FROM basic
-                    WHERE data BETWEEN %s AND %s
-                    ORDER BY data
+                    WHERE "DATA" BETWEEN %s AND %s
+                    ORDER BY "DATA"
                     """
                     
                     # Usar pandas para ler direto para DataFrame
