@@ -6,6 +6,10 @@ from urllib.parse import quote_plus
 
 class DatabaseConnection:
     def __init__(self):
+        self.conn = None
+        self.cursor = None
+        self.config = None
+        
         try:
             # Tentar carregar as configurações
             if 'postgres' not in st.secrets:
@@ -14,11 +18,11 @@ class DatabaseConnection:
             
             # Configurações do banco
             self.config = {
-                'dbname': st.secrets.postgres.database,
-                'user': st.secrets.postgres.user,
-                'password': st.secrets.postgres.password,
-                'host': st.secrets.postgres.host,
-                'port': st.secrets.postgres.port,
+                'dbname': 'postgres',
+                'user': 'postgres.vdmzeeewpzfpgmnaabfw',
+                'password': 'RNupTzhk6d-3SZC',
+                'host': 'aws-0-sa-east-1.pooler.supabase.com',
+                'port': 6543,
                 'connect_timeout': 10
             }
             
@@ -31,35 +35,18 @@ class DatabaseConnection:
         except Exception as e:
             st.error(f"❌ Erro ao carregar configurações: {str(e)}")
             raise e
-        
-        self.conn = None
-        self.cursor = None
 
     def connect(self):
         try:
-            # Tentar conexão direta primeiro
-            try:
-                st.write("Tentando conexão principal...")
-                self.conn = psycopg2.connect(**self.config)
-                self.cursor = self.conn.cursor()
-                st.success("✅ Conexão principal estabelecida!")
-                return True
-            except psycopg2.OperationalError as e:
-                st.warning(f"⚠️ Erro na conexão principal: {str(e)}")
-                # Se falhar, tentar conexão alternativa
-                st.warning("⚠️ Tentando conexão alternativa...")
-                alt_config = {
-                    'dbname': 'postgres',
-                    'user': 'postgres.vdmzeeewpzfpgmnaabfw',
-                    'password': 'RNupTzhk6d-3SZC',
-                    'host': 'aws-0-sa-east-1.pooler.supabase.com',
-                    'port': 6543,
-                    'connect_timeout': 10
-                }
-                self.conn = psycopg2.connect(**alt_config)
-                self.cursor = self.conn.cursor()
-                st.success("✅ Conexão alternativa estabelecida!")
-                return True
+            if self.config is None:
+                st.error("❌ Configurações não inicializadas")
+                return False
+                
+            st.write("Tentando conexão com o banco...")
+            self.conn = psycopg2.connect(**self.config)
+            self.cursor = self.conn.cursor()
+            st.success("✅ Conexão estabelecida!")
+            return True
                 
         except Exception as e:
             st.error(f"❌ Erro ao conectar ao banco de dados: {str(e)}")
