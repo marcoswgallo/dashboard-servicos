@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from DB import DatabaseConnection
+from datetime import datetime, timedelta
 
 # Configuração da página
 st.set_page_config(
@@ -108,16 +109,12 @@ with st.container():
             help="Filtrar dados dos últimos X dias"
         )
 
-    # Query com filtro de dias
-    query = f"""
-    SELECT *
-    FROM "Basic"
-    WHERE TO_DATE("DATA", 'DD/MM/YYYY') >= CURRENT_DATE - INTERVAL '{dias} days'
-    ORDER BY TO_DATE("DATA", 'DD/MM/YYYY') DESC;
-    """
-
+    # Calcular data limite
+    data_limite = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
+    
     # Carregar dados
-    df = load_data_with_query(query)
+    db = DatabaseConnection()
+    df = db.execute_query(data_limite)
     
     if df is not None:
         with col2:

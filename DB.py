@@ -24,14 +24,11 @@ class DatabaseConnection:
         date_part = re.sub(r'[^\d/]', '', date_part)
         return date_part
 
-    def execute_query(self, query_params):
+    def execute_query(self, data_limite):
         try:
             if self.supabase is None:
                 st.error("Cliente Supabase não inicializado")
                 return None
-            
-            # Extrair a data limite dos parâmetros
-            data_limite = query_params.split("=")[1]
             
             # Fazer a consulta usando a API do Supabase
             response = self.supabase.table('Basic').select('*').execute()
@@ -55,8 +52,10 @@ class DatabaseConnection:
             # Debug: mostrar dados após conversão
             st.write("Primeiros registros após conversão:", df.head(2).to_dict('records'))
             
-            # Filtrar por data
+            # Converter data limite para datetime
             data_limite = pd.to_datetime(data_limite)
+            
+            # Filtrar por data
             df = df[df['DATA'] >= data_limite]
             
             # Ordenar por data
