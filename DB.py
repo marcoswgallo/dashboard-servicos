@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from supabase.client import create_client
+from datetime import datetime, timedelta
 
 class DatabaseConnection:
     def __init__(self):
@@ -16,9 +17,22 @@ class DatabaseConnection:
         try:
             if self.supabase is None:
                 return None
-                
-            # Executar a query usando o cliente Supabase
-            response = self.supabase.rpc('execute_sql', {'query': query}).execute()
+            
+            # Extrair o período da query
+            if "INTERVAL" in query:
+                dias = int(query.split("INTERVAL '")[1].split(" days")[0])
+                data_limite = datetime.now() - timedelta(days=dias)
+                data_limite_str = data_limite.strftime("%Y-%m-%d")
+            else:
+                data_limite_str = "1900-01-01"  # Data antiga para pegar todos os registros
+            
+            # Fazer a consulta usando a API do Supabase
+            response = (self.supabase
+                .table("Basic")
+                .select("*")
+                .gte("DATA", data_limite_str)
+                .order("DATA", desc=True)
+                .execute())
             
             if response.data:
                 df = pd.DataFrame(response.data)
@@ -29,24 +43,8 @@ class DatabaseConnection:
             return None
 
     def get_table_names(self) -> list:
-        query = """
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        """
-        df = self.execute_query(query)
-        if df is not None:
-            return df['table_name'].tolist()
-        return []
-
-    def get_table_columns(self, table_name: str) -> list:
-        query = f"""
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = '{table_name}'
-        """
-        df = self.execute_query(query)
-        if df is not None:
-            return df['column_name'].tolist()
-        return []
+        try:
+            tables = self.supabase.table("Basic").select("*").limit(1).execute()
+            return ["Basic"] if tables else []
+        except:
+            return []
