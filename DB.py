@@ -2,6 +2,7 @@ import psycopg2
 import pandas as pd
 from typing import Optional
 import streamlit as st
+from urllib.parse import quote_plus
 
 class DatabaseConnection:
     def __init__(self):
@@ -18,7 +19,7 @@ class DatabaseConnection:
                 'password': st.secrets.postgres.password,
                 'host': st.secrets.postgres.host,
                 'port': st.secrets.postgres.port,
-                'connect_timeout': 10  # Timeout de 10 segundos
+                'connect_timeout': 10
             }
             
         except Exception as e:
@@ -38,10 +39,11 @@ class DatabaseConnection:
             except psycopg2.OperationalError as e:
                 # Se falhar, tentar conexão alternativa
                 st.warning("⚠️ Tentando conexão alternativa...")
+                password = quote_plus('RNupTzhk6d-3SZC')
                 alt_config = {
                     'dbname': 'postgres',
                     'user': 'postgres',
-                    'password': 'Basic@2024',
+                    'password': password,
                     'host': 'db.vdmzeeewpzfpgmnaabfw.supabase.co',
                     'port': 5432,
                     'connect_timeout': 10
