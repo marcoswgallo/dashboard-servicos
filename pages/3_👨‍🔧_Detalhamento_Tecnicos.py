@@ -49,6 +49,38 @@ def format_minutes(minutes):
     mins = int(minutes % 60)
     return f"{hours:02d}:{mins:02d}"
 
+def format_currency(value):
+    """Formata valor em reais."""
+    return f"R$ {value:,.2f}"
+
+def create_bar_chart(df, x, y, title, color_scale):
+    """Cria gráfico de barras padronizado."""
+    fig = px.bar(
+        df,
+        x=x,
+        y=y,
+        title=title,
+        color=y,
+        color_continuous_scale=color_scale,
+        text=y
+    )
+    fig.update_layout(
+        showlegend=False,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        title_x=0.5,
+        title_font_size=16,
+        xaxis_title="",
+        yaxis_title="",
+        xaxis_tickangle=-45,
+        height=500
+    )
+    fig.update_traces(
+        texttemplate='%{text:,.0f}',
+        textposition='outside'
+    )
+    return fig
+
 # Título principal
 st.title("👨‍🔧 Detalhamento por Técnico")
 
@@ -103,7 +135,7 @@ with st.container():
         with col3:
             st.metric("🔄 Total de Serviços", f"{total_servicos:,.0f}")
         with col4:
-            st.metric("💰 Valor Total", f"R$ {valor_total:,.2f}")
+            st.metric("💰 Valor Total", format_currency(valor_total))
         st.markdown('</div>', unsafe_allow_html=True)
             
         # Análise por técnico
@@ -133,29 +165,27 @@ with st.container():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Gráfico de barras - Top 10 por volume
-            fig1 = px.bar(
+            # Top 10 por volume
+            fig1 = create_bar_chart(
                 df_tecnico.head(10),
-                x='Técnico',
-                y='Total Serviços',
-                title='Top 10 Técnicos por Volume de Serviços',
-                color='Total Serviços',
-                color_continuous_scale='Reds'
+                'Técnico',
+                'Total Serviços',
+                'Top 10 Técnicos por Volume de Serviços',
+                'Reds'
             )
-            fig1.update_layout(showlegend=False)
             st.plotly_chart(fig1, use_container_width=True)
             
         with col2:
-            # Gráfico de barras - Top 10 por valor
-            fig2 = px.bar(
-                df_tecnico.sort_values('Valor Total', ascending=False).head(10),
-                x='Técnico',
-                y='Valor Total',
-                title='Top 10 Técnicos por Valor Total',
-                color='Valor Total',
-                color_continuous_scale='Greens'
+            # Top 10 por valor
+            df_valor = df_tecnico.sort_values('Valor Total', ascending=False).head(10).copy()
+            df_valor['Valor Total'] = df_valor['Valor Total'].round(2)
+            fig2 = create_bar_chart(
+                df_valor,
+                'Técnico',
+                'Valor Total',
+                'Top 10 Técnicos por Valor Total',
+                'Greens'
             )
-            fig2.update_layout(showlegend=False)
             st.plotly_chart(fig2, use_container_width=True)
         
         # Tabela detalhada
@@ -178,6 +208,7 @@ with st.container():
         }).reset_index()
         
         df_base.columns = ['Base', 'Total Técnicos', 'Total Serviços', 'Valor Total']
+        df_base = df_base.sort_values('Total Serviços', ascending=False)
         
         # Gráfico de pizza
         fig3 = px.pie(
@@ -186,6 +217,15 @@ with st.container():
             names='Base',
             title='Distribuição de Serviços por Base',
             hole=0.4
+        )
+        fig3.update_layout(
+            title_x=0.5,
+            title_font_size=16,
+            height=500
+        )
+        fig3.update_traces(
+            textinfo='percent+label',
+            textposition='outside'
         )
         st.plotly_chart(fig3, use_container_width=True)
         
