@@ -1,11 +1,10 @@
 import psycopg2
 import pandas as pd
-from typing import Optional
 import streamlit as st
 
 class DatabaseConnection:
     def __init__(self):
-        self.conn = None
+        self.connection = None
         self.cursor = None
         self.config = {
             "dbname": st.secrets["dbname"],
@@ -18,8 +17,8 @@ class DatabaseConnection:
 
     def connect(self):
         try:
-            self.conn = psycopg2.connect(**self.config)
-            self.cursor = self.conn.cursor()
+            self.connection = psycopg2.connect(**self.config)
+            self.cursor = self.connection.cursor()
             return True
         except Exception as e:
             st.error(f"Erro ao conectar ao banco: {str(e)}")
@@ -29,23 +28,24 @@ class DatabaseConnection:
         try:
             if self.cursor:
                 self.cursor.close()
-            if self.conn:
-                self.conn.close()
+            if self.connection:
+                self.connection.close()
         except Exception as e:
             st.error(f"Erro ao desconectar: {str(e)}")
 
-    def execute_query(self, query: str) -> Optional[pd.DataFrame]:
+    def execute_query(self, query):
         try:
             if not self.connect():
-                st.error("Não foi possível estabelecer conexão com o banco")
                 return None
-                
+
             self.cursor.execute(query)
             columns = [desc[0] for desc in self.cursor.description]
             data = self.cursor.fetchall()
             
-            df = pd.DataFrame(data, columns=columns)
-            return df
+            if data:
+                df = pd.DataFrame(data, columns=columns)
+                return df
+            return None
         except Exception as e:
             st.error(f"Erro ao executar query: {str(e)}")
             return None
