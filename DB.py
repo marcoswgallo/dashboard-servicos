@@ -7,35 +7,36 @@ from urllib.parse import quote_plus
 class DatabaseConnection:
     def __init__(self):
         try:
-            # Tentar pegar as configurações do Streamlit primeiro
-            self.config = {
-                'host': st.secrets['postgres']['host'],
-                'port': st.secrets['postgres']['port'],
-                'database': st.secrets['postgres']['database'],
-                'user': st.secrets['postgres']['user'],
-                'password': st.secrets['postgres']['password']
-            }
+            # Tentar pegar as configurações do Streamlit
+            password = st.secrets["postgres"]["password"]
+            host = st.secrets["postgres"]["host"]
+            port = st.secrets["postgres"]["port"]
+            database = st.secrets["postgres"]["database"]
+            user = st.secrets["postgres"]["user"]
+            
+            # Criar string de conexão
+            self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+            
+            # Debug - Mostrar configurações (exceto senha)
+            st.write(f"Debug - Tentando conectar em: {host}:{port}/{database} com usuário {user}")
+            
         except Exception as e:
-            # Se não encontrar no Streamlit, usar configuração local
-            password = quote_plus('RNupTzhk6d-3SZC')
-            self.config = {
-                'host': 'db.vdmzeeewpzfpgmnaabfw.supabase.co',
-                'port': 5432,
-                'database': 'postgres',
-                'user': 'postgres',
-                'password': password
-            }
+            st.error(f"Erro ao carregar configurações: {str(e)}")
+            # Usar configuração local como fallback
+            password = quote_plus('Basic@2024')
+            self.connection_string = f"postgresql://postgres:{password}@db.vdmzeeewpzfpgmnaabfw.supabase.co:5432/postgres"
         
         self.conn = None
         self.cursor = None
 
     def connect(self):
         try:
-            self.conn = psycopg2.connect(**self.config)
+            self.conn = psycopg2.connect(self.connection_string)
             self.cursor = self.conn.cursor()
-            print("Conexão bem sucedida!")
+            st.success("Conexão bem sucedida!")
         except Exception as e:
-            print(f"Erro ao conectar ao banco de dados: {e}")
+            st.error(f"Erro ao conectar ao banco de dados: {str(e)}")
+            raise e
 
     def disconnect(self):
         if self.cursor:
@@ -52,7 +53,7 @@ class DatabaseConnection:
             data = self.cursor.fetchall()
             return pd.DataFrame(data, columns=columns)
         except Exception as e:
-            print(f"Erro ao executar query: {e}")
+            st.error(f"Erro ao executar query: {str(e)}")
             return None
         finally:
             self.disconnect()
