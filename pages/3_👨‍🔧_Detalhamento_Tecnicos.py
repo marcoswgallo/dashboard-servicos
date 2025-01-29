@@ -91,12 +91,17 @@ with st.container():
     col1, col2 = st.columns([2,2])
     
     with col1:
-        dias = st.slider(
-            "📅 Período de análise (dias):",
-            min_value=1,
-            max_value=90,
-            value=30,
-            help="Filtrar dados dos últimos X dias"
+        data_fim = st.date_input(
+            "📅 Data Final:",
+            value=datetime.now(),
+            max_value=datetime.now(),
+            help="Data final do período de análise"
+        )
+        data_inicio = st.date_input(
+            "📅 Data Inicial:",
+            value=data_fim - timedelta(days=30),
+            max_value=data_fim,
+            help="Data inicial do período de análise"
         )
     
     with col2:
@@ -108,12 +113,13 @@ with st.container():
             help="Filtrar técnicos com pelo menos X serviços"
         )
 
-    # Calcular data limite
-    data_limite = (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
+    # Calcular datas limite
+    data_inicio_str = data_inicio.strftime("%Y-%m-%d")
+    data_fim_str = data_fim.strftime("%Y-%m-%d")
     
     # Carregar dados
     db = DatabaseConnection()
-    df = db.execute_query(data_limite)
+    df = db.execute_query(data_inicio_str, data_fim_str)
     
     if df is not None:
         # Converter DESLOCAMENTO para minutos

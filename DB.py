@@ -37,14 +37,14 @@ class DatabaseConnection:
                 return 0
         return value
 
-    def execute_query(self, data_limite):
+    def execute_query(self, data_inicio, data_fim):
         try:
             if self.supabase is None:
                 st.error("Cliente Supabase não inicializado")
                 return None
             
             # Fazer a consulta usando a API do Supabase
-            response = self.supabase.table('Basic').select('*').execute()
+            response = self.supabase.table('Basic').select('*').gte('DATA', data_inicio).lte('DATA', data_fim).execute()
             
             if not response.data:
                 st.warning("Nenhum dado encontrado na tabela Basic")
@@ -71,10 +71,11 @@ class DatabaseConnection:
             st.write("Primeiros registros após conversão:", df.head(2).to_dict('records'))
             
             # Converter data limite para datetime
-            data_limite = pd.to_datetime(data_limite)
+            data_inicio = pd.to_datetime(data_inicio)
+            data_fim = pd.to_datetime(data_fim)
             
             # Filtrar por data
-            df = df[df['DATA'] >= data_limite]
+            df = df[(df['DATA'] >= data_inicio) & (df['DATA'] <= data_fim)]
             
             # Ordenar por data
             df = df.sort_values('DATA', ascending=False)
