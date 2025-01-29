@@ -48,13 +48,12 @@ class DatabaseConnection:
                 st.warning(f"⚠️ Erro na conexão principal: {str(e)}")
                 # Se falhar, tentar conexão alternativa
                 st.warning("⚠️ Tentando conexão alternativa...")
-                password = quote_plus('RNupTzhk6d-3SZC')
                 alt_config = {
                     'dbname': 'postgres',
-                    'user': 'postgres',
-                    'password': password,
-                    'host': 'db.vdmzeeewpzfpgmnaabfw.supabase.co',
-                    'port': 5432,
+                    'user': 'postgres.vdmzeeewpzfpgmnaabfw',
+                    'password': 'RNupTzhk6d-3SZC',
+                    'host': 'aws-0-sa-east-1.pooler.supabase.com',
+                    'port': 6543,
                     'connect_timeout': 10
                 }
                 self.conn = psycopg2.connect(**alt_config)
