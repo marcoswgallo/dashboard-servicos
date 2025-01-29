@@ -13,9 +13,28 @@ class DatabaseConnection:
             self.supabase = create_client(url, key)
             st.success("✅ Conexão com Supabase estabelecida com sucesso!")
             
+            # Verificar datas disponíveis
+            self.check_date_range()
+            
         except Exception as e:
             st.error(f"❌ Erro ao conectar ao banco de dados: {str(e)}")
             self.supabase = None
+    
+    def check_date_range(self):
+        """Verifica a primeira e última data disponível no banco."""
+        try:
+            # Buscar primeira data (ordem ascendente)
+            first_date = self.supabase.table('Basic').select('DATA').order('DATA', desc=False).limit(1).execute()
+            # Buscar última data (ordem descendente)
+            last_date = self.supabase.table('Basic').select('DATA').order('DATA', desc=True).limit(1).execute()
+            
+            if first_date.data and last_date.data:
+                st.info(f"📅 Dados disponíveis de {first_date.data[0]['DATA']} até {last_date.data[0]['DATA']}")
+                # Guardar as datas para uso posterior
+                self.first_date = first_date.data[0]['DATA']
+                self.last_date = last_date.data[0]['DATA']
+        except Exception as e:
+            st.error(f"Erro ao verificar datas: {str(e)}")
 
     def convert_value(self, value):
         """Converte valor para float."""
@@ -48,8 +67,8 @@ class DatabaseConnection:
         Executa query no banco de dados.
         
         Args:
-            data_inicio (str): Data inicial no formato YYYY-MM-DD
-            data_fim (str): Data final no formato YYYY-MM-DD
+            data_inicio (str): Data inicial no formato DD/MM/YYYY
+            data_fim (str): Data final no formato DD/MM/YYYY
             
         Returns:
             DataFrame: Resultado da query ou None se houver erro
@@ -63,6 +82,14 @@ class DatabaseConnection:
                     page = 1
                     page_size = 10000  # Aumentado para 10k registros por página
                     
+                    # Converter datas para o formato do banco
+                    data_inicio_dt = pd.to_datetime(_data_inicio, format='%d/%m/%Y')
+                    data_fim_dt = pd.to_datetime(_data_fim, format='%d/%m/%Y')
+                    
+                    # Converter para string no formato do banco
+                    data_inicio_str = data_inicio_dt.strftime('%d/%m/%Y')
+                    data_fim_str = data_fim_dt.strftime('%d/%m/%Y')
+                    
                     while True:
                         # Calcular o offset
                         offset = (page - 1) * page_size
@@ -70,8 +97,8 @@ class DatabaseConnection:
                         # Fazer a consulta para a página atual com filtro de data
                         response = (_supabase.table('Basic')
                                   .select('*')
-                                  .gte('DATA', _data_inicio)
-                                  .lte('DATA', _data_fim)
+                                  .gte('DATA', data_inicio_str)
+                                  .lte('DATA', data_fim_str)
                                   .range(offset, offset + page_size - 1)
                                   .execute())
                         
@@ -104,7 +131,7 @@ class DatabaseConnection:
             all_data = fetch_data(self.supabase, data_inicio, data_fim)
             
             if not all_data:
-                st.warning("Nenhum dado encontrado na tabela Basic")
+                st.warning("Nenhum dado encontrado para o período selecionado")
                 return None
             
             with st.spinner('🔄 Processando dados...'):
@@ -139,10 +166,6 @@ class DatabaseConnection:
                     'BASE': '',
                     'STATUS': ''
                 })
-                
-                if len(df) == 0:
-                    st.warning("Nenhum dado encontrado para o período selecionado")
-                    return None
                 
                 st.success(f"✅ {len(df):,} registros carregados com sucesso!")
                 return df
