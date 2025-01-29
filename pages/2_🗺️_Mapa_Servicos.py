@@ -23,12 +23,12 @@ with st.container():
     with col1:
         data_inicial = st.text_input(
             "📅 Data Inicial:",
-            value=datetime.now().strftime("%d/%m/%Y"),
+            value="01/01/2025",  # Primeiro dia com dados
             help="Digite a data inicial no formato DD/MM/YYYY"
         )
         data_final = st.text_input(
             "📅 Data Final:",
-            value=datetime.now().strftime("%d/%m/%Y"),
+            value="27/01/2025",  # Último dia com dados
             help="Digite a data final no formato DD/MM/YYYY"
         )
 
