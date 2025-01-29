@@ -40,7 +40,7 @@ def load_data():
     try:
         db = DatabaseConnection()
         
-        # Primeiro, verificar se a tabela existe
+        # Verificar se a tabela existe
         check_query = """
         SELECT EXISTS (
             SELECT FROM information_schema.tables 
@@ -64,7 +64,7 @@ def load_data():
         query = """
         SELECT *
         FROM "Basic"
-        LIMIT 5000;
+        LIMIT 1000;
         """
         
         df = db.execute_query(query)
