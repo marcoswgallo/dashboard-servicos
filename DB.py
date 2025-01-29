@@ -25,7 +25,7 @@ class DatabaseConnection:
         try:
             with self.conn.cursor() as cur:
                 # Buscar primeira data
-                cur.execute('SELECT MIN("DATA") as first_date, MAX("DATA") as last_date FROM basic')
+                cur.execute('SELECT MIN("DATA_TOA") as first_date, MAX("DATA_TOA") as last_date FROM basic')
                 result = cur.fetchone()
                 
                 if result and result['first_date'] and result['last_date']:
@@ -70,23 +70,21 @@ class DatabaseConnection:
                         # Primeiro tenta formato ISO (YYYY-MM-DD)
                         data_inicio_dt = pd.to_datetime(_data_inicio)
                         data_fim_dt = pd.to_datetime(_data_fim)
-                        st.write("DEBUG - Datas convertidas usando formato ISO")
                     except:
                         try:
                             # Depois tenta formato BR (DD/MM/YYYY)
                             data_inicio_dt = pd.to_datetime(_data_inicio, format='%d/%m/%Y')
                             data_fim_dt = pd.to_datetime(_data_fim, format='%d/%m/%Y')
-                            st.write("DEBUG - Datas convertidas usando formato BR")
                         except Exception as e:
                             st.error(f"Erro ao converter datas. Use formato DD/MM/YYYY ou YYYY-MM-DD: {str(e)}")
                             return None
                     
                     # Validar se as datas estão dentro do período disponível
-                    if data_inicio_dt < _first_date:
+                    if _first_date and data_inicio_dt < _first_date:
                         st.warning(f"⚠️ Data inicial ajustada para {_first_date.strftime('%d/%m/%Y %H:%M')} (primeiro registro disponível)")
                         data_inicio_dt = _first_date
                     
-                    if data_fim_dt > _last_date:
+                    if _last_date and data_fim_dt > _last_date:
                         st.warning(f"⚠️ Data final ajustada para {_last_date.strftime('%d/%m/%Y %H:%M')} (último registro disponível)")
                         data_fim_dt = _last_date
                     
@@ -94,8 +92,8 @@ class DatabaseConnection:
                     query = """
                     SELECT *
                     FROM basic
-                    WHERE "DATA" BETWEEN %s AND %s
-                    ORDER BY "DATA"
+                    WHERE "DATA_TOA" BETWEEN %s AND %s
+                    ORDER BY "DATA_TOA"
                     """
                     
                     # Usar pandas para ler direto para DataFrame
@@ -137,7 +135,7 @@ class DatabaseConnection:
                 df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
                 
                 # Ordenar por data
-                df = df.sort_values('DATA', ascending=False)
+                df = df.sort_values('DATA_TOA', ascending=False)
                 
                 # Preencher valores nulos
                 df = df.fillna({
