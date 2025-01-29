@@ -122,6 +122,9 @@ def load_data():
         st.error(f"Erro ao carregar dados: {str(e)}")
         return None
 
+# Carregar dados iniciais
+df = load_data()
+
 # Container para filtros
 with st.container():
     st.markdown("### 🎯 Filtros")
@@ -138,9 +141,10 @@ with st.container():
         )
         
     with col2:
+        status_options = sorted(df['STATUS'].unique()) if df is not None and not df.empty else []
         status = st.multiselect(
             "🔄 Status:",
-            sorted(df['STATUS'].unique()) if df is not None else [],
+            options=status_options,
             default=[],
             help="Filtrar por status do serviço"
         )
@@ -164,7 +168,7 @@ ORDER BY TO_DATE("DATA", 'DD/MM/YYYY') DESC
 LIMIT 1000;
 """
 
-# Carregar dados
+# Recarregar dados com a nova query
 df = load_data()
 
 if df is not None:
