@@ -41,8 +41,8 @@ class DatabaseConnection:
                     first_date = result[0]
                     last_date = result[1]
                     
-                    st.info(f"📅 Dados disponíveis de {first_date.strftime(\"%d/%m/%Y %H:%M\")} "
-                           f"até {last_date.strftime(\"%d/%m/%Y %H:%M\")}")
+                    st.info(f"📅 Dados disponíveis de {first_date.strftime(%d/%m/%Y %H:%M)} "
+                           f"até {last_date.strftime(%d/%m/%Y %H:%M)}")
                 else:
                     st.warning("⚠️ Não foi possível determinar o range de datas disponível")
                 
@@ -95,7 +95,7 @@ class DatabaseConnection:
                 SELECT *
                 FROM basic
                 WHERE "DATA_TOA"::timestamp 
-                    BETWEEN %(start_date)s AND %(end_date)s
+                    BETWEEN :start_date AND :end_date
                 ORDER BY "DATA_TOA"
             """)
             
