@@ -1,7 +1,7 @@
 import streamlit as st
 from supabase import create_client
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class DatabaseConnection:
     def __init__(self):
@@ -83,7 +83,8 @@ class DatabaseConnection:
                     # Fazer a consulta usando a API do Supabase com paginação
                     all_data = []
                     page = 1
-                    page_size = 10000  # Aumentado para 10k registros por página
+                    page_size = 1000  # Reduzido para 1000 para evitar problemas
+                    total_registros = 0
                     
                     # Debug das datas recebidas
                     st.write(f"DEBUG - Data inicial recebida: {_data_inicio}")
@@ -120,52 +121,63 @@ class DatabaseConnection:
                     
                     st.info(f"🔍 Buscando registros de {data_inicio_str} até {data_fim_str}")
                     
-                    # Debug da query
-                    st.write(f"DEBUG - Query com datas: DATA >= '{data_inicio_str}' AND DATA <= '{data_fim_str}'")
+                    # Primeiro, contar total de registros
+                    count_query = (_supabase.table('Basic')
+                                 .select('*', count='exact')
+                                 .gte('DATA', data_inicio_str)
+                                 .lte('DATA', data_fim_str))
                     
+                    count_result = count_query.execute()
+                    total_registros = count_result.count if hasattr(count_result, 'count') else 0
+                    
+                    if total_registros == 0:
+                        st.warning("Nenhum registro encontrado para o período")
+                        return None
+                    
+                    st.write(f"🔍 Encontrados {total_registros:,} registros para carregar")
+                    
+                    # Criar barra de progresso
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    # Agora carregar os dados em páginas
                     while True:
-                        # Calcular o offset
-                        offset = (page - 1) * page_size
+                        start = (page - 1) * page_size
+                        end = start + page_size - 1
                         
-                        # Debug da paginação
-                        st.write(f"DEBUG - Carregando página {page} (offset: {offset}, limit: {page_size})")
+                        # Fazer a consulta para a página atual
+                        query = (_supabase.table('Basic')
+                                .select('*')
+                                .gte('DATA', data_inicio_str)
+                                .lte('DATA', data_fim_str)
+                                .order('DATA')
+                                .range(start, end))
                         
-                        # Fazer a consulta para a página atual com filtro de data
-                        response = (_supabase.table('Basic')
-                                  .select('*')
-                                  .gte('DATA', data_inicio_str)
-                                  .lte('DATA', data_fim_str)
-                                  .order('DATA')  # Ordenar por data para garantir consistência
-                                  .range(offset, offset + page_size - 1)
-                                  .execute())
-                        
-                        # Debug da resposta
-                        if page == 1 and not response.data:
-                            st.write("DEBUG - Primeira query não retornou dados")
-                        elif page == 1:
-                            st.write(f"DEBUG - Primeira data encontrada: {response.data[0]['DATA']}")
-                            st.write(f"DEBUG - Última data encontrada: {response.data[-1]['DATA']}")
-                            st.write(f"DEBUG - Total de registros na primeira página: {len(response.data)}")
+                        response = query.execute()
                         
                         if not response.data:
-                            if page == 1:
-                                st.warning("Nenhum registro encontrado para o período")
                             break
-                            
+                        
                         all_data.extend(response.data)
-                        current_page_size = len(response.data)
                         
                         # Atualizar progresso
-                        st.write(f"📥 Carregados {len(all_data):,} registros...")
+                        progress = len(all_data) / total_registros
+                        progress_bar.progress(progress)
+                        status_text.write(f"📥 Carregados {len(all_data):,} de {total_registros:,} registros ({progress*100:.1f}%)")
                         
-                        # Se retornou menos que page_size registros, chegamos ao fim
-                        if current_page_size < page_size:
-                            st.write(f"DEBUG - Última página carregada com {current_page_size} registros")
+                        if len(all_data) >= total_registros:
                             break
-                            
+                        
                         page += 1
-                
-                return all_data
+                    
+                    # Limpar componentes temporários
+                    status_text.empty()
+                    progress_bar.empty()
+                    
+                    if len(all_data) > 0:
+                        st.success(f"✅ Carregados {len(all_data):,} registros com sucesso!")
+                    
+                    return all_data
                     
             except Exception as e:
                 st.error(f"Erro ao carregar dados: {str(e)}")
