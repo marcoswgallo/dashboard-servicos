@@ -194,16 +194,31 @@ if df is not None:
                 hover_name='CLIENTE'
             )
             
-            # Mostrar o mapa com configurações de interatividade
-            st.plotly_chart(
-                fig,
-                use_container_width=True,
-                config={
-                    'displayModeBar': True,
-                    'modeBarButtonsToAdd': ['zoom', 'pan', 'select', 'lasso2d', 'resetScale'],
-                    'scrollZoom': True
-                }
+            # Ajustar layout
+            fig.update_layout(
+                mapbox=dict(
+                    style='carto-positron',  # Estilo claro do mapa
+                    center=dict(
+                        lat=-22.01,  # Região de Campinas
+                        lon=-47.86
+                    ),
+                    zoom=8  # Zoom mais aberto
+                ),
+                showlegend=True,
+                legend=dict(
+                    title='STATUS',
+                    yanchor="top",
+                    y=0.99,
+                    xanchor="left",
+                    x=0.01,
+                    bgcolor='rgba(255,255,255,0.8)'  # Fundo semi-transparente
+                ),
+                margin={"r":0,"t":30,"l":0,"b":0},
+                height=600
             )
+            
+            # Mostrar o mapa
+            st.plotly_chart(fig, use_container_width=True)
 
             # Seção de Insights Inteligentes
             st.markdown("---")
