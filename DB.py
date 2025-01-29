@@ -24,6 +24,19 @@ class DatabaseConnection:
         date_part = re.sub(r'[^\d/]', '', date_part)
         return date_part
 
+    def clean_numeric(self, value):
+        """Limpa e converte valores numéricos."""
+        if pd.isna(value):
+            return 0
+        if isinstance(value, str):
+            # Remove caracteres não numéricos exceto . e -
+            value = re.sub(r'[^\d.-]', '', value)
+            try:
+                return float(value)
+            except:
+                return 0
+        return value
+
     def execute_query(self, data_limite):
         try:
             if self.supabase is None:
@@ -45,6 +58,11 @@ class DatabaseConnection:
             # Limpar e converter datas
             df['DATA'] = df['DATA'].apply(self.clean_date)
             df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y', errors='coerce')
+            
+            # Limpar valores numéricos
+            df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.clean_numeric)
+            df['VALOR_EMPRESA'] = df['VALOR EMPRESA'].apply(self.clean_numeric)
+            df['PONTO'] = df['PONTO'].apply(self.clean_numeric)
             
             # Remover registros com datas inválidas
             df = df.dropna(subset=['DATA'])
