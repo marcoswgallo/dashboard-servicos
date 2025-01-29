@@ -67,8 +67,8 @@ class DatabaseConnection:
         Executa query no banco de dados.
         
         Args:
-            data_inicio (str): Data inicial no formato DD/MM/YYYY
-            data_fim (str): Data final no formato DD/MM/YYYY
+            data_inicio (str): Data inicial no formato YYYY-MM-DD ou DD/MM/YYYY
+            data_fim (str): Data final no formato YYYY-MM-DD ou DD/MM/YYYY
             
         Returns:
             DataFrame: Resultado da query ou None se houver erro
@@ -82,13 +82,34 @@ class DatabaseConnection:
                     page = 1
                     page_size = 10000  # Aumentado para 10k registros por página
                     
-                    # Converter datas para o formato do banco
-                    data_inicio_dt = pd.to_datetime(_data_inicio, format='%d/%m/%Y')
-                    data_fim_dt = pd.to_datetime(_data_fim, format='%d/%m/%Y')
+                    # Debug das datas recebidas
+                    st.write(f"DEBUG - Data inicial recebida: {_data_inicio}")
+                    st.write(f"DEBUG - Data final recebida: {_data_fim}")
                     
-                    # Converter para string no formato do banco
+                    # Tentar converter as datas para o formato correto
+                    try:
+                        # Primeiro tenta formato ISO (YYYY-MM-DD)
+                        data_inicio_dt = pd.to_datetime(_data_inicio)
+                        data_fim_dt = pd.to_datetime(_data_fim)
+                        st.write("DEBUG - Datas convertidas usando formato ISO")
+                    except:
+                        try:
+                            # Depois tenta formato BR (DD/MM/YYYY)
+                            data_inicio_dt = pd.to_datetime(_data_inicio, format='%d/%m/%Y')
+                            data_fim_dt = pd.to_datetime(_data_fim, format='%d/%m/%Y')
+                            st.write("DEBUG - Datas convertidas usando formato BR")
+                        except Exception as e:
+                            st.error(f"Erro ao converter datas. Use formato DD/MM/YYYY ou YYYY-MM-DD: {str(e)}")
+                            return None
+                    
+                    # Converter para string no formato do banco (DD/MM/YYYY)
                     data_inicio_str = data_inicio_dt.strftime('%d/%m/%Y')
                     data_fim_str = data_fim_dt.strftime('%d/%m/%Y')
+                    
+                    st.info(f"🔍 Buscando registros de {data_inicio_str} até {data_fim_str}")
+                    
+                    # Debug da query
+                    st.write(f"DEBUG - Query com datas: DATA >= '{data_inicio_str}' AND DATA <= '{data_fim_str}'")
                     
                     while True:
                         # Calcular o offset
