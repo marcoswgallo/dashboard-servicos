@@ -371,6 +371,5 @@ with st.container():
         
         else:
             st.warning("Não há dados com coordenadas válidas para os filtros selecionados.")
-
-else:
-    st.warning("Não há dados com coordenadas válidas para os filtros selecionados.")
+    else:
+        st.warning("Não há dados disponíveis para os filtros selecionados.")
