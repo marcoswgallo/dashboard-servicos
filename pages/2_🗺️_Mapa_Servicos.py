@@ -64,6 +64,8 @@ def load_data():
         query = """
         SELECT *
         FROM "Basic"
+        WHERE "DATA" >= CURRENT_DATE - INTERVAL '30 days'
+        ORDER BY "DATA" DESC
         LIMIT 1000;
         """
         
@@ -272,21 +274,43 @@ if df is not None:
                 lon='LONGITUDE',
                 color='STATUS',
                 color_discrete_sequence=px.colors.qualitative.Set1,
-                hover_name='TECNICO',
+                title='Localização dos Serviços',
                 hover_data={
                     'LATIDUDE': False,
                     'LONGITUDE': False,
                     'DATA': True,
                     'SERVIÇO': True,
-                    'CIDADES': True,
+                    'TECNICO': True,
                     'BASE': True,
                     'STATUS': True,
-                    'CONTRATO': True,
-                    'ENDEREÇO': True,
-                    'BAIRRO': True
+                    'BAIRRO': True,
+                    'CIDADES': True,
+                    'TIPO DE SERVIÇO': True
                 },
-                zoom=10,
-                title='Localização dos Serviços - Visualização por Pontos'
+                hover_name='CLIENTE'
+            )
+            
+            # Ajustar layout
+            fig.update_layout(
+                mapbox=dict(
+                    style=style_map[map_style],
+                    center=dict(
+                        lat=df_map['LATIDUDE'].mean(),
+                        lon=df_map['LONGITUDE'].mean()
+                    ),
+                    zoom=9.5,  # Zoom um pouco mais aberto
+                ),
+                showlegend=True,
+                legend=dict(
+                    title='STATUS',
+                    yanchor="top",
+                    y=0.99,
+                    xanchor="left",
+                    x=0.01,
+                    bgcolor='rgba(255,255,255,0.8)'  # Fundo semi-transparente
+                ),
+                margin={"r":0,"t":30,"l":0,"b":0},
+                height=800
             )
         else:
             # Criar mapa de calor
