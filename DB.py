@@ -1,100 +1,111 @@
-import pandas as pd
 import streamlit as st
-from supabase import create_client, Client
-from datetime import datetime, timedelta
-import re
+from supabase import create_client
+import pandas as pd
+from datetime import datetime
 
 class DatabaseConnection:
     def __init__(self):
-        self.supabase = None
         try:
-            url: str = st.secrets["supabase"]["url"]
-            key: str = st.secrets["supabase"]["key"]
-            self.supabase: Client = create_client(url, key)
+            # Inicializar cliente Supabase
+            url = st.secrets["supabase_url"]
+            key = st.secrets["supabase_key"]
+            self.supabase = create_client(url, key)
         except Exception as e:
-            st.error(f"Erro ao inicializar cliente Supabase: {str(e)}")
+            st.error(f"Erro ao conectar ao banco de dados: {str(e)}")
+            self.supabase = None
 
-    def clean_date(self, date_str):
-        """Remove a hora da string de data se existir."""
-        if pd.isna(date_str):
-            return None
-        # Remove qualquer coisa após um espaço (assumindo que é a hora)
-        date_part = str(date_str).split(' ')[0]
-        # Remove caracteres não numéricos exceto /
-        date_part = re.sub(r'[^\d/]', '', date_part)
-        return date_part
-
-    def clean_numeric(self, value):
-        """Limpa e converte valores numéricos."""
-        if pd.isna(value):
-            return 0
-        if isinstance(value, str):
-            # Remove caracteres não numéricos exceto . e -
-            value = re.sub(r'[^\d.-]', '', value)
-            try:
+    def convert_value(self, value):
+        """Converte valor para float."""
+        try:
+            if isinstance(value, str):
+                # Remove R$ e converte vírgula para ponto
+                value = value.replace('R$', '').replace('.', '').replace(',', '.')
                 return float(value)
-            except:
-                return 0
-        return value
+            return value
+        except:
+            return 0
+
+    def convert_date(self, date_str):
+        """Converte string de data para datetime."""
+        try:
+            if pd.isna(date_str):
+                return None
+            # Tenta diferentes formatos de data
+            for fmt in ['%d/%m/%Y %H:%M', '%d/%m/%Y']:
+                try:
+                    return pd.to_datetime(date_str, format=fmt)
+                except:
+                    continue
+            return None
+        except:
+            return None
 
     def execute_query(self, data_inicio, data_fim):
+        """
+        Executa query no banco de dados.
+        
+        Args:
+            data_inicio (str): Data inicial no formato YYYY-MM-DD
+            data_fim (str): Data final no formato YYYY-MM-DD
+            
+        Returns:
+            DataFrame: Resultado da query ou None se houver erro
+        """
         try:
             if self.supabase is None:
                 st.error("Cliente Supabase não inicializado")
                 return None
             
             # Fazer a consulta usando a API do Supabase
-            response = self.supabase.table('Basic').select('*').gte('DATA', data_inicio).lte('DATA', data_fim).execute()
+            response = self.supabase.table('Basic').select('*').execute()
             
             if not response.data:
                 st.warning("Nenhum dado encontrado na tabela Basic")
                 return None
-                
+            
+            # Converter para DataFrame
             df = pd.DataFrame(response.data)
             
-            # Debug: mostrar dados originais
-            st.write("Primeiros registros originais:", df.head(2).to_dict('records'))
+            # Converter valores monetários
+            df['VALOR_TÉCNICO'] = df['VALOR_TÉCNICO'].apply(self.convert_value)
+            df['VALOR_EMPRESA'] = df['VALOR_EMPRESA'].apply(self.convert_value)
             
-            # Limpar e converter datas
-            df['DATA'] = df['DATA'].apply(self.clean_date)
-            df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y', errors='coerce')
+            # Converter coordenadas para float
+            df['LATIDUDE'] = pd.to_numeric(df['LATIDUDE'], errors='coerce')
+            df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
             
-            # Limpar valores numéricos
-            df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.clean_numeric)
-            df['VALOR_EMPRESA'] = df['VALOR EMPRESA'].apply(self.clean_numeric)
-            df['PONTO'] = df['PONTO'].apply(self.clean_numeric)
+            # Converter data para datetime
+            df['DATA'] = df['DATA'].apply(self.convert_date)
             
-            # Remover registros com datas inválidas
+            # Remover registros com data inválida
             df = df.dropna(subset=['DATA'])
             
-            # Debug: mostrar dados após conversão
-            st.write("Primeiros registros após conversão:", df.head(2).to_dict('records'))
-            
-            # Converter data limite para datetime
-            data_inicio = pd.to_datetime(data_inicio)
-            data_fim = pd.to_datetime(data_fim)
-            
             # Filtrar por data
-            df = df[(df['DATA'] >= data_inicio) & (df['DATA'] <= data_fim)]
+            data_inicio_dt = pd.to_datetime(data_inicio)
+            data_fim_dt = pd.to_datetime(data_fim)
+            df = df[(df['DATA'].dt.date >= data_inicio_dt.date()) & 
+                   (df['DATA'].dt.date <= data_fim_dt.date())]
             
             # Ordenar por data
             df = df.sort_values('DATA', ascending=False)
             
+            # Preencher valores nulos
+            df = df.fillna({
+                'SERVIÇO': '',
+                'CIDADES': '',
+                'TECNICO': '',
+                'BASE': '',
+                'STATUS': ''
+            })
+            
             if len(df) == 0:
-                st.warning("Nenhum dado encontrado após aplicar os filtros")
+                st.warning("Nenhum dado encontrado para o período selecionado")
                 return None
                 
             return df
-            
+                
         except Exception as e:
             st.error(f"Erro ao executar query: {str(e)}")
-            st.error("Detalhes do erro para debug:")
-            st.error(str(e.__class__.__name__))
-            st.error(str(e.__dict__))
-            if 'df' in locals():
-                st.write("Exemplo de dados problemáticos:")
-                problematic = df[pd.to_datetime(df['DATA'], format='%d/%m/%Y', errors='coerce').isna()]
-                st.write(problematic['DATA'].head().tolist())
             return None
 
     def get_table_names(self) -> list:
