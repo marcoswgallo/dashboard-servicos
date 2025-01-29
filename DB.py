@@ -1,50 +1,59 @@
 import pandas as pd
 import streamlit as st
-from supabase.client import create_client
+from supabase import create_client, Client
 from datetime import datetime, timedelta
 
 class DatabaseConnection:
     def __init__(self):
         self.supabase = None
         try:
-            url = st.secrets["supabase"]["url"]
-            key = st.secrets["supabase"]["key"]
-            self.supabase = create_client(url, key)
+            url: str = st.secrets["supabase"]["url"]
+            key: str = st.secrets["supabase"]["key"]
+            self.supabase: Client = create_client(url, key)
         except Exception as e:
             st.error(f"Erro ao inicializar cliente Supabase: {str(e)}")
 
-    def execute_query(self, query):
+    def execute_query(self, query_params):
         try:
             if self.supabase is None:
+                st.error("Cliente Supabase não inicializado")
                 return None
             
-            # Extrair o período da query
-            if "INTERVAL" in query:
-                dias = int(query.split("INTERVAL '")[1].split(" days")[0])
-                data_limite = datetime.now() - timedelta(days=dias)
-                data_limite_str = data_limite.strftime("%Y-%m-%d")
-            else:
-                data_limite_str = "1900-01-01"  # Data antiga para pegar todos os registros
+            # Extrair a data limite dos parâmetros
+            data_limite = query_params.split("=")[1]
             
             # Fazer a consulta usando a API do Supabase
-            response = (self.supabase
-                .table("Basic")
-                .select("*")
-                .gte("DATA", data_limite_str)
-                .order("DATA", desc=True)
-                .execute())
+            response = self.supabase.table('Basic').select('*').execute()
             
-            if response.data:
-                df = pd.DataFrame(response.data)
-                return df
-            return None
+            if not response.data:
+                st.warning("Nenhum dado encontrado na tabela Basic")
+                return None
+                
+            df = pd.DataFrame(response.data)
+            
+            # Converter a coluna DATA para datetime
+            df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y')
+            
+            # Filtrar por data
+            data_limite = pd.to_datetime(data_limite)
+            df = df[df['DATA'] >= data_limite]
+            
+            # Ordenar por data
+            df = df.sort_values('DATA', ascending=False)
+            
+            return df
+            
         except Exception as e:
             st.error(f"Erro ao executar query: {str(e)}")
+            st.error("Detalhes do erro para debug:")
+            st.error(str(e.__class__.__name__))
+            st.error(str(e.__dict__))
             return None
 
     def get_table_names(self) -> list:
         try:
-            tables = self.supabase.table("Basic").select("*").limit(1).execute()
-            return ["Basic"] if tables else []
-        except:
+            response = self.supabase.table('Basic').select('*').limit(1).execute()
+            return ["Basic"] if response.data else []
+        except Exception as e:
+            st.error(f"Erro ao listar tabelas: {str(e)}")
             return []
