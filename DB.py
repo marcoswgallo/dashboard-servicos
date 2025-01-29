@@ -79,11 +79,8 @@ class DatabaseConnection:
             df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.convert_value)
             df['VALOR_EMPRESA'] = df['VALOR EMPRESA'].apply(self.convert_value)
             
-            # Renomear colunas com espaço
-            df = df.rename(columns={
-                'VALOR TÉCNICO': 'VALOR_TÉCNICO',
-                'VALOR EMPRESA': 'VALOR_EMPRESA'
-            })
+            # Remover colunas originais
+            df = df.drop(['VALOR TÉCNICO', 'VALOR EMPRESA'], axis=1)
             
             # Converter coordenadas para float
             df['LATIDUDE'] = pd.to_numeric(df['LATIDUDE'], errors='coerce')
