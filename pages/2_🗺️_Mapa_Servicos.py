@@ -59,8 +59,20 @@ def load_data_with_query(query):
         db = DatabaseConnection()
         df = db.execute_query(query)
         if df is not None and not df.empty:
-            # Converter DATA para datetime
-            df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y')
+            # Converter DATA para datetime usando um parser mais flexível
+            def parse_date(date_str):
+                try:
+                    # Primeiro tenta o formato com hora
+                    return pd.to_datetime(date_str, format='%d/%m/%Y %H:%M')
+                except:
+                    try:
+                        # Se falhar, tenta só a data
+                        return pd.to_datetime(date_str, format='%d/%m/%Y')
+                    except:
+                        # Se ainda falhar, retorna None
+                        return None
+
+            df['DATA'] = df['DATA'].apply(parse_date)
             
             # Converter valores para numérico
             df['VALOR TÉCNICO'] = pd.to_numeric(df['VALOR TÉCNICO'].str.replace(',', '.'), errors='coerce')
