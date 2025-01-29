@@ -13,6 +13,19 @@ class DatabaseConnection:
         except Exception as e:
             st.error(f"Erro ao inicializar cliente Supabase: {str(e)}")
 
+    def parse_date(self, date_str):
+        """Tenta converter string para data em diferentes formatos."""
+        try:
+            # Primeiro tenta com hora
+            return pd.to_datetime(date_str, format='%d/%m/%Y %H:%M')
+        except:
+            try:
+                # Se falhar, tenta só com data
+                return pd.to_datetime(date_str, format='%d/%m/%Y')
+            except:
+                # Se ainda falhar, retorna None
+                return None
+
     def execute_query(self, query_params):
         try:
             if self.supabase is None:
@@ -31,8 +44,11 @@ class DatabaseConnection:
                 
             df = pd.DataFrame(response.data)
             
-            # Converter a coluna DATA para datetime
-            df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y')
+            # Converter a coluna DATA para datetime usando o parser personalizado
+            df['DATA'] = df['DATA'].apply(self.parse_date)
+            
+            # Remover linhas onde a data não pôde ser convertida
+            df = df.dropna(subset=['DATA'])
             
             # Filtrar por data
             data_limite = pd.to_datetime(data_limite)
@@ -41,6 +57,10 @@ class DatabaseConnection:
             # Ordenar por data
             df = df.sort_values('DATA', ascending=False)
             
+            if len(df) == 0:
+                st.warning("Nenhum dado encontrado após aplicar os filtros")
+                return None
+                
             return df
             
         except Exception as e:
