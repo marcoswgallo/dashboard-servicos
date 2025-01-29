@@ -59,15 +59,35 @@ class DatabaseConnection:
                 st.error("Cliente Supabase não inicializado")
                 return None
             
-            # Fazer a consulta usando a API do Supabase
-            response = self.supabase.table('Basic').select('*').execute()
+            # Fazer a consulta usando a API do Supabase com paginação
+            all_data = []
+            page = 1
+            page_size = 1000
             
-            if not response.data:
+            while True:
+                # Calcular o offset
+                offset = (page - 1) * page_size
+                
+                # Fazer a consulta para a página atual
+                response = self.supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
+                
+                if not response.data:
+                    break
+                    
+                all_data.extend(response.data)
+                
+                # Se retornou menos que page_size registros, chegamos ao fim
+                if len(response.data) < page_size:
+                    break
+                    
+                page += 1
+            
+            if not all_data:
                 st.warning("Nenhum dado encontrado na tabela Basic")
                 return None
             
             # Converter para DataFrame
-            df = pd.DataFrame(response.data)
+            df = pd.DataFrame(all_data)
             
             # Converter valores monetários
             df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.convert_value)
@@ -107,7 +127,8 @@ class DatabaseConnection:
             if len(df) == 0:
                 st.warning("Nenhum dado encontrado para o período selecionado")
                 return None
-                
+            
+            st.info(f"📊 Total de registros carregados: {len(df):,}")
             return df
                 
         except Exception as e:
