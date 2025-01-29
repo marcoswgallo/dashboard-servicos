@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from DB import DatabaseConnection
 
@@ -44,153 +43,101 @@ df = db.execute_query(data_inicio, data_fim)
 if df is not None and not df.empty:
     # Filtros adicionais
     col1, col2 = st.sidebar.columns(2)
-    
+
     with col1:
         cidades = st.multiselect(
             "🏙️ Cidades:",
-            options=sorted(df['CIDADES'].unique()),
+            options=sorted(df['CIDADES'].unique().tolist()),
             default=[]
         )
-    
+
     with col2:
-        status = st.multiselect(
-            "📊 Status:",
-            options=sorted(df['STATUS'].unique()),
+        tecnicos = st.multiselect(
+            "👨‍🔧 Técnicos:",
+            options=sorted(df['TECNICO'].unique().tolist()),
             default=[]
         )
-    
+
     # Aplicar filtros
     if cidades:
         df = df[df['CIDADES'].isin(cidades)]
-    if status:
-        df = df[df['STATUS'].isin(status)]
-    
-    # Métricas principais
+    if tecnicos:
+        df = df[df['TECNICO'].isin(tecnicos)]
+
+    # Métricas Gerais
+    st.subheader("📊 Métricas Gerais")
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
-        valor_total = df['VALOR_TÉCNICO'].sum()
-        st.metric(
-            "Valor Total",
-            f"R$ {valor_total:,.2f}",
-            help="Soma total dos valores dos serviços"
-        )
-    
+        total_servicos = len(df)
+        st.metric("Total de Serviços", total_servicos)
+
     with col2:
-        valor_medio = df['VALOR_TÉCNICO'].mean()
-        st.metric(
-            "Valor Médio",
-            f"R$ {valor_medio:,.2f}",
-            help="Valor médio por serviço"
-        )
-    
+        total_tecnicos = len(df['TECNICO'].unique())
+        st.metric("Total de Técnicos", total_tecnicos)
+
     with col3:
-        valor_mediano = df['VALOR_TÉCNICO'].median()
-        st.metric(
-            "Valor Mediano",
-            f"R$ {valor_mediano:,.2f}",
-            help="Valor mediano dos serviços"
-        )
-    
+        media_servicos = total_servicos / total_tecnicos if total_tecnicos > 0 else 0
+        st.metric("Média Serviços/Técnico", f"{media_servicos:.1f}")
+
     with col4:
-        desvio_padrao = df['VALOR_TÉCNICO'].std()
-        st.metric(
-            "Desvio Padrão",
-            f"R$ {desvio_padrao:,.2f}",
-            help="Desvio padrão dos valores"
+        concluidos = len(df[df['STATUS'].str.contains('Concluído', case=False, na=False)])
+        st.metric("Serviços Concluídos", concluidos)
+
+    # Gráficos
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Serviços por cidade
+        servicos_cidade = df['CIDADES'].value_counts().reset_index()
+        servicos_cidade.columns = ['Cidade', 'Quantidade']
+        
+        fig = px.bar(
+            servicos_cidade,
+            x='Cidade',
+            y='Quantidade',
+            title='Serviços por Cidade',
+            labels={'Quantidade': 'Quantidade de Serviços'}
         )
-    
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col2:
+        # Serviços por status
+        status_servicos = df['STATUS'].value_counts().reset_index()
+        status_servicos.columns = ['Status', 'Quantidade']
+        
+        fig = px.pie(
+            status_servicos,
+            values='Quantidade',
+            names='Status',
+            title='Distribuição por Status'
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
     # Análise temporal
     st.subheader("📈 Análise Temporal")
     
-    # Dados diários
+    # Serviços por data
     df['Data'] = df['DATA_TOA'].dt.date
-    df_diario = df.groupby('Data').agg({
-        'VALOR_TÉCNICO': ['sum', 'mean', 'count']
-    }).reset_index()
-    df_diario.columns = ['Data', 'Valor_Total', 'Valor_Medio', 'Quantidade']
+    servicos_data = df.groupby('Data').size().reset_index()
+    servicos_data.columns = ['Data', 'Quantidade']
     
-    # Gráfico de linha temporal
-    fig = go.Figure()
-    
-    fig.add_trace(go.Scatter(
-        x=df_diario['Data'],
-        y=df_diario['Valor_Total'],
-        name='Valor Total',
-        mode='lines+markers'
-    ))
-    
-    fig.add_trace(go.Scatter(
-        x=df_diario['Data'],
-        y=df_diario['Quantidade'] * df_diario['Valor_Medio'],
-        name='Quantidade x Valor Médio',
-        mode='lines+markers'
-    ))
-    
-    fig.update_layout(
-        title='Evolução Temporal dos Valores',
-        xaxis_title='Data',
-        yaxis_title='Valor (R$)'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Análises por cidade e status
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Top 10 cidades por valor
-        df_cidade = df.groupby('CIDADES').agg({
-            'VALOR_TÉCNICO': ['sum', 'count']
-        }).reset_index()
-        df_cidade.columns = ['Cidade', 'Valor_Total', 'Quantidade']
-        
-        fig = px.bar(
-            df_cidade.nlargest(10, 'Valor_Total'),
-            x='Cidade',
-            y='Valor_Total',
-            title='Top 10 Cidades por Valor Total',
-            color='Quantidade',
-            labels={'Valor_Total': 'Valor Total (R$)'},
-            color_continuous_scale='Viridis'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Distribuição por status
-        df_status = df.groupby('STATUS').agg({
-            'VALOR_TÉCNICO': ['sum', 'count']
-        }).reset_index()
-        df_status.columns = ['Status', 'Valor_Total', 'Quantidade']
-        
-        fig = px.pie(
-            df_status,
-            values='Valor_Total',
-            names='Status',
-            title='Distribuição de Valores por Status',
-            hover_data=['Quantidade']
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Histograma de valores
-    st.subheader("📊 Distribuição de Valores")
-    
-    fig = px.histogram(
-        df,
-        x='VALOR_TÉCNICO',
-        nbins=50,
-        title='Distribuição dos Valores dos Serviços',
-        labels={'VALOR_TÉCNICO': 'Valor (R$)', 'count': 'Quantidade'}
+    fig = px.line(
+        servicos_data,
+        x='Data',
+        y='Quantidade',
+        title='Serviços por Data',
+        labels={'Quantidade': 'Quantidade de Serviços'}
     )
     st.plotly_chart(fig, use_container_width=True)
-    
+
     # Tabela detalhada
-    with st.expander("📋 Análise Detalhada por Cidade"):
-        st.dataframe(
-            df_cidade.sort_values('Valor_Total', ascending=False),
-            hide_index=True,
-            use_container_width=True
-        )
+    st.subheader("📋 Dados Detalhados")
+    st.dataframe(
+        df[['DATA_TOA', 'TECNICO', 'CIDADES', 'SERVIÇO', 'STATUS']].sort_values('DATA_TOA', ascending=False),
+        hide_index=True,
+        use_container_width=True
+    )
 
 else:
-    st.warning("Nenhum dado encontrado para o período selecionado.")
+    st.warning("⚠️ Nenhum dado encontrado para o período selecionado. Tente ajustar as datas do filtro.")

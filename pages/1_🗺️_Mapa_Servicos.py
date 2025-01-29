@@ -53,14 +53,14 @@ if df is not None and not df.empty:
     with col1:
         cidades = st.multiselect(
             "🏙️ Cidades:",
-            options=sorted(df['CIDADES'].unique()),
+            options=sorted(df['CIDADES'].unique().tolist()),
             default=[]
         )
     
     with col2:
         tecnicos = st.multiselect(
             "👨‍🔧 Técnicos:",
-            options=sorted(df['TECNICO'].unique()),
+            options=sorted(df['TECNICO'].unique().tolist()),
             default=[]
         )
 

@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from DB import DatabaseConnection
 
@@ -45,125 +44,71 @@ if df is not None and not df.empty:
     # Filtros adicionais
     tecnicos = st.sidebar.multiselect(
         "👨‍🔧 Técnicos:",
-        options=sorted(df['TECNICO'].unique()),
+        options=sorted(df['TECNICO'].unique().tolist()),
         default=[]
     )
-    
+
     # Aplicar filtros
     if tecnicos:
         df = df[df['TECNICO'].isin(tecnicos)]
-    
-    # Análises por técnico
-    df_tecnico = df.groupby('TECNICO').agg({
-        'VALOR_TÉCNICO': ['count', 'sum', 'mean'],
-        'CIDADES': 'nunique',
-        'STATUS': lambda x: (x == 'Concluído').sum() / len(x) * 100
-    }).reset_index()
-    
-    # Renomear colunas
-    df_tecnico.columns = [
-        'Técnico', 'Total_Servicos', 'Valor_Total', 
-        'Valor_Medio', 'Cidades_Atendidas', 'Taxa_Conclusao'
-    ]
-    
-    # Métricas principais
-    col1, col2, col3 = st.columns(3)
-    
+
+    # Métricas Gerais
+    st.subheader("📊 Métricas Gerais")
+    col1, col2, col3, col4 = st.columns(4)
+
     with col1:
-        st.metric(
-            "Técnicos Ativos",
-            f"{len(df_tecnico):,}",
-            help="Número de técnicos que realizaram serviços no período"
-        )
+        st.metric("Total de Técnicos", len(df['TECNICO'].unique()))
     
     with col2:
-        media_servicos = df_tecnico['Total_Servicos'].mean()
-        st.metric(
-            "Média de Serviços/Técnico",
-            f"{media_servicos:,.1f}",
-            help="Média de serviços por técnico no período"
-        )
+        st.metric("Total de Serviços", len(df))
     
     with col3:
-        media_valor = df_tecnico['Valor_Total'].mean()
-        st.metric(
-            "Média de Valor/Técnico",
-            f"R$ {media_valor:,.2f}",
-            help="Média de valor total por técnico"
-        )
+        media_servicos = len(df) / len(df['TECNICO'].unique())
+        st.metric("Média de Serviços/Técnico", f"{media_servicos:.1f}")
     
+    with col4:
+        concluidos = len(df[df['STATUS'].str.contains('Concluído', case=False, na=False)])
+        st.metric("Serviços Concluídos", concluidos)
+
     # Gráficos
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        # Top 10 técnicos por número de serviços
+        # Serviços por técnico
+        servicos_tecnico = df['TECNICO'].value_counts().reset_index()
+        servicos_tecnico.columns = ['Técnico', 'Quantidade']
+        
         fig = px.bar(
-            df_tecnico.nlargest(10, 'Total_Servicos'),
+            servicos_tecnico,
             x='Técnico',
-            y='Total_Servicos',
-            title='Top 10 Técnicos por Número de Serviços',
-            labels={'Total_Servicos': 'Total de Serviços'},
-            color='Total_Servicos',
-            color_continuous_scale='Viridis'
+            y='Quantidade',
+            title='Serviços por Técnico',
+            labels={'Quantidade': 'Quantidade de Serviços'}
         )
         st.plotly_chart(fig, use_container_width=True)
-    
+
     with col2:
-        # Top 10 técnicos por valor total
+        # Status por técnico
+        status_tecnico = df.groupby(['TECNICO', 'STATUS']).size().reset_index()
+        status_tecnico.columns = ['Técnico', 'Status', 'Quantidade']
+        
         fig = px.bar(
-            df_tecnico.nlargest(10, 'Valor_Total'),
+            status_tecnico,
             x='Técnico',
-            y='Valor_Total',
-            title='Top 10 Técnicos por Valor Total',
-            labels={'Valor_Total': 'Valor Total (R$)'},
-            color='Valor_Total',
-            color_continuous_scale='Viridis'
+            y='Quantidade',
+            color='Status',
+            title='Status dos Serviços por Técnico',
+            barmode='group'
         )
         st.plotly_chart(fig, use_container_width=True)
-    
-    # Análise de desempenho
-    st.subheader("📊 Análise de Desempenho")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Scatter plot: Serviços x Valor Médio
-        fig = px.scatter(
-            df_tecnico,
-            x='Total_Servicos',
-            y='Valor_Medio',
-            title='Relação entre Número de Serviços e Valor Médio',
-            labels={
-                'Total_Servicos': 'Total de Serviços',
-                'Valor_Medio': 'Valor Médio (R$)'
-            },
-            hover_data=['Técnico', 'Taxa_Conclusao'],
-            color='Taxa_Conclusao',
-            color_continuous_scale='RdYlGn',
-            size='Cidades_Atendidas'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Taxa de conclusão por técnico
-        fig = px.bar(
-            df_tecnico.sort_values('Taxa_Conclusao', ascending=False),
-            x='Técnico',
-            y='Taxa_Conclusao',
-            title='Taxa de Conclusão por Técnico',
-            labels={'Taxa_Conclusao': 'Taxa de Conclusão (%)'},
-            color='Taxa_Conclusao',
-            color_continuous_scale='RdYlGn'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
+
     # Tabela detalhada
-    with st.expander("📋 Dados Detalhados por Técnico"):
-        st.dataframe(
-            df_tecnico.sort_values('Total_Servicos', ascending=False),
-            hide_index=True,
-            use_container_width=True
-        )
+    st.subheader("📋 Dados Detalhados")
+    st.dataframe(
+        df[['DATA_TOA', 'TECNICO', 'CIDADES', 'SERVIÇO', 'STATUS']],
+        hide_index=True,
+        use_container_width=True
+    )
 
 else:
-    st.warning("Nenhum dado encontrado para o período selecionado.")
+    st.warning("⚠️ Nenhum dado encontrado para o período selecionado. Tente ajustar as datas do filtro.")
