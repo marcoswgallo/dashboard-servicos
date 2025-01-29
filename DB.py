@@ -91,7 +91,7 @@ class DatabaseConnection:
                 SELECT *
                 FROM basic
                 WHERE "DATA_TOA"::timestamp 
-                    BETWEEN %(start_date)s AND %(end_date)s
+                    BETWEEN :start_date AND :end_date
                 ORDER BY "DATA_TOA"
             """)
             
@@ -101,8 +101,8 @@ class DatabaseConnection:
                     query,
                     conn,
                     params={
-                        'start_date': start.strftime('%Y-%m-%d %H:%M:%S'),
-                        'end_date': end.strftime('%Y-%m-%d %H:%M:%S')
+                        'start_date': start,
+                        'end_date': end
                     },
                     parse_dates=['DATA_TOA']
                 )
