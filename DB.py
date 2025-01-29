@@ -102,9 +102,9 @@ class DatabaseConnection:
                             st.error(f"Erro ao converter datas. Use formato DD/MM/YYYY ou YYYY-MM-DD: {str(e)}")
                             return None
                     
-                    # Converter para string no formato do banco (DD/MM/YYYY)
-                    data_inicio_str = data_inicio_dt.strftime('%d/%m/%Y')
-                    data_fim_str = data_fim_dt.strftime('%d/%m/%Y')
+                    # Converter para string no formato do banco (DD/MM/YYYY HH:MM)
+                    data_inicio_str = data_inicio_dt.strftime('%d/%m/%Y 00:00')
+                    data_fim_str = data_fim_dt.strftime('%d/%m/%Y 23:59')
                     
                     st.info(f"🔍 Buscando registros de {data_inicio_str} até {data_fim_str}")
                     
@@ -122,6 +122,13 @@ class DatabaseConnection:
                                   .lte('DATA', data_fim_str)
                                   .range(offset, offset + page_size - 1)
                                   .execute())
+                        
+                        # Debug da resposta
+                        if page == 1 and not response.data:
+                            st.write("DEBUG - Primeira query não retornou dados")
+                        elif page == 1:
+                            st.write(f"DEBUG - Primeira data encontrada: {response.data[0]['DATA']}")
+                            st.write(f"DEBUG - Última data encontrada: {response.data[-1]['DATA']}")
                         
                         if not response.data:
                             break
