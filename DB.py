@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 from supabase import create_client, Client
 from datetime import datetime, timedelta
+import re
 
 class DatabaseConnection:
     def __init__(self):
@@ -12,6 +13,16 @@ class DatabaseConnection:
             self.supabase: Client = create_client(url, key)
         except Exception as e:
             st.error(f"Erro ao inicializar cliente Supabase: {str(e)}")
+
+    def clean_date(self, date_str):
+        """Remove a hora da string de data se existir."""
+        if pd.isna(date_str):
+            return None
+        # Remove qualquer coisa após um espaço (assumindo que é a hora)
+        date_part = str(date_str).split(' ')[0]
+        # Remove caracteres não numéricos exceto /
+        date_part = re.sub(r'[^\d/]', '', date_part)
+        return date_part
 
     def execute_query(self, query_params):
         try:
@@ -31,14 +42,18 @@ class DatabaseConnection:
                 
             df = pd.DataFrame(response.data)
             
-            # Debug: mostrar alguns exemplos de datas
-            st.write("Exemplos de datas no banco:", df['DATA'].head().tolist())
+            # Debug: mostrar dados originais
+            st.write("Primeiros registros originais:", df.head(2).to_dict('records'))
             
-            # Converter a coluna DATA para datetime usando parser flexível
-            df['DATA'] = pd.to_datetime(df['DATA'], format='mixed', dayfirst=True)
+            # Limpar e converter datas
+            df['DATA'] = df['DATA'].apply(self.clean_date)
+            df['DATA'] = pd.to_datetime(df['DATA'], format='%d/%m/%Y', errors='coerce')
             
-            # Debug: mostrar datas convertidas
-            st.write("Exemplos de datas convertidas:", df['DATA'].head().dt.strftime('%Y-%m-%d %H:%M').tolist())
+            # Remover registros com datas inválidas
+            df = df.dropna(subset=['DATA'])
+            
+            # Debug: mostrar dados após conversão
+            st.write("Primeiros registros após conversão:", df.head(2).to_dict('records'))
             
             # Filtrar por data
             data_limite = pd.to_datetime(data_limite)
@@ -58,10 +73,10 @@ class DatabaseConnection:
             st.error("Detalhes do erro para debug:")
             st.error(str(e.__class__.__name__))
             st.error(str(e.__dict__))
-            # Debug: mostrar o tipo de dados que estamos tentando converter
             if 'df' in locals():
-                st.write("Tipo de dados na coluna DATA:", df['DATA'].dtype)
-                st.write("Primeiros valores da coluna DATA:", df['DATA'].head().tolist())
+                st.write("Exemplo de dados problemáticos:")
+                problematic = df[pd.to_datetime(df['DATA'], format='%d/%m/%Y', errors='coerce').isna()]
+                st.write(problematic['DATA'].head().tolist())
             return None
 
     def get_table_names(self) -> list:
