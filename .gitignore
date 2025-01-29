@@ -34,19 +34,14 @@ ENV/
 *.swo
 
 # Streamlit
-.streamlit/
-secrets.toml
 .streamlit/secrets.toml
 
-# Database
+# Project specific
+*.xlsx
+*.csv
 *.db
 *.sqlite3
 
-# OS
+# System
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db

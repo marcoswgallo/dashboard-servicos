@@ -1,25 +1,15 @@
-# Dashboard de Análise de Serviços
+# Dashboard de Serviços Técnicos
 
-Este é um dashboard interativo desenvolvido com Streamlit para análise de serviços técnicos, oferecendo visualizações e insights operacionais.
+Dashboard interativo para análise e visualização de serviços técnicos, construído com Streamlit.
 
-## Funcionalidades
+## 🌟 Funcionalidades
 
-- 📊 Detalhamento de Técnicos
-  - Análise de performance individual
-  - Métricas de produtividade
+- 📊 **Dashboard Principal**: Visão geral com métricas principais
+- 🗺️ **Mapa de Serviços**: Visualização geográfica dos serviços
+- 👨‍🔧 **Análise por Técnico**: Métricas detalhadas por técnico
+- 💰 **Análise Financeira**: Análise detalhada dos valores
 
-- 🗺️ Mapa de Serviços
-  - Visualização geográfica dos serviços
-  - Análise de densidade por região
-  - Insights operacionais
-  - Métricas de performance
-
-## Requisitos
-
-- Python 3.8+
-- Dependências listadas em `requirements.txt`
-
-## Instalação
+## 🚀 Como Executar Localmente
 
 1. Clone o repositório:
 ```bash
@@ -27,44 +17,69 @@ git clone [URL_DO_SEU_REPOSITORIO]
 cd ProjetoBasic
 ```
 
-2. Instale as dependências:
+2. Crie um ambiente virtual:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# ou
+.venv\Scripts\activate  # Windows
+```
+
+3. Instale as dependências:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configure as variáveis de ambiente no arquivo `.streamlit/secrets.toml`:
+4. Configure as variáveis de ambiente:
+- Crie um arquivo `.streamlit/secrets.toml` com:
 ```toml
 [postgres]
-host = "seu_host"
-port = 5432
-database = "seu_banco"
-user = "seu_usuario"
-password = "sua_senha"
+url = "sua_url_do_banco_neon"
 ```
 
-## Executando o Dashboard
-
+5. Execute a aplicação:
 ```bash
 streamlit run streamlit_app.py
 ```
 
-## Estrutura do Projeto
+## 🔒 Variáveis de Ambiente
+
+Para executar este projeto, você precisará das seguintes variáveis de ambiente no Streamlit Cloud:
+
+- `postgres.url`: URL de conexão com o banco Neon PostgreSQL
+
+## 📦 Estrutura do Projeto
 
 ```
 ProjetoBasic/
-├── streamlit_app.py        # Aplicação principal
-├── pages/                  # Páginas do dashboard
-│   ├── 1_📊_Detalhamento_Tecnicos.py
-│   └── 2_🗺️_Mapa_Servicos.py
-├── DB.py                   # Conexão com banco de dados
-├── requirements.txt        # Dependências do projeto
-└── README.md              # Documentação
+├── .streamlit/
+│   └── secrets.toml
+├── pages/
+│   ├── 1_🗺️_Mapa_Servicos.py
+│   ├── 2_👨‍🔧_Analise_Tecnicos.py
+│   └── 3_💰_Analise_Financeira.py
+├── DB.py
+├── import_excel.py
+├── streamlit_app.py
+├── requirements.txt
+└── README.md
 ```
 
-## Contribuindo
+## 🛠️ Tecnologias Utilizadas
 
-1. Faça um Fork do projeto
-2. Crie sua Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a Branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+- [Streamlit](https://streamlit.io/)
+- [Pandas](https://pandas.pydata.org/)
+- [Plotly](https://plotly.com/)
+- [Folium](https://python-visualization.github.io/folium/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [SQLAlchemy](https://www.sqlalchemy.org/)
+
+## 📈 Deploy
+
+Este projeto está configurado para deploy automático no Streamlit Cloud.
+Para fazer o deploy:
+
+1. Faça o push do código para o GitHub
+2. Acesse [share.streamlit.io](https://share.streamlit.io)
+3. Configure as variáveis de ambiente necessárias
+4. Deploy!

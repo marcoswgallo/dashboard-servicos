@@ -25,12 +25,12 @@ class DatabaseConnection:
         try:
             with self.conn.cursor() as cur:
                 # Buscar primeira data
-                cur.execute('SELECT MIN("DATA_TOA") as first_date, MAX("DATA_TOA") as last_date FROM basic')
+                cur.execute('SELECT MIN("DATA_TOA")::timestamp as first_date, MAX("DATA_TOA")::timestamp as last_date FROM basic')
                 result = cur.fetchone()
                 
                 if result and result['first_date'] and result['last_date']:
-                    self.first_date = result['first_date']
-                    self.last_date = result['last_date']
+                    self.first_date = pd.to_datetime(result['first_date'])
+                    self.last_date = pd.to_datetime(result['last_date'])
                     
                     st.info(f"📅 Dados disponíveis de {self.first_date.strftime('%d/%m/%Y %H:%M')} "
                            f"até {self.last_date.strftime('%d/%m/%Y %H:%M')}")
@@ -88,11 +88,11 @@ class DatabaseConnection:
                         st.warning(f"⚠️ Data final ajustada para {_last_date.strftime('%d/%m/%Y %H:%M')} (último registro disponível)")
                         data_fim_dt = _last_date
                     
-                    # Query SQL
+                    # Query SQL com cast explícito
                     query = """
                     SELECT *
                     FROM basic
-                    WHERE "DATA_TOA" BETWEEN %s AND %s
+                    WHERE "DATA_TOA"::timestamp BETWEEN %s::timestamp AND %s::timestamp
                     ORDER BY "DATA_TOA"
                     """
                     
@@ -100,12 +100,16 @@ class DatabaseConnection:
                     df = pd.read_sql_query(
                         query, 
                         _conn, 
-                        params=(data_inicio_dt, data_fim_dt)
+                        params=(data_inicio_dt.strftime('%Y-%m-%d %H:%M:%S'), 
+                               data_fim_dt.strftime('%Y-%m-%d %H:%M:%S'))
                     )
                     
                     if df.empty:
                         st.warning("Nenhum dado encontrado para o período selecionado")
                         return None
+                    
+                    # Converter DATA_TOA para datetime
+                    df['DATA_TOA'] = pd.to_datetime(df['DATA_TOA'])
                     
                     st.success(f"✅ {len(df):,} registros carregados com sucesso!")
                     return df
