@@ -39,11 +39,40 @@ base_tipos = {
 def load_data():
     try:
         db = DatabaseConnection()
-        query = """
-        SELECT * FROM "Basic"
+        
+        # Primeiro, verificar se a tabela existe
+        check_query = """
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'Basic'
+        );
         """
+        result = db.execute_query(check_query)
+        if result is None or not result.iloc[0, 0]:
+            st.error("❌ A tabela 'Basic' não existe no banco de dados")
+            return None
+            
+        # Se a tabela existe, contar registros
+        count_query = "SELECT COUNT(*) FROM \"Basic\";"
+        count_result = db.execute_query(count_query)
+        if count_result is not None:
+            total_records = count_result.iloc[0, 0]
+            st.write(f"Total de registros na tabela: {total_records}")
+        
+        # Buscar os dados
+        query = """
+        SELECT *
+        FROM "Basic"
+        LIMIT 5000;
+        """
+        
         df = db.execute_query(query)
-        if df is not None:
+        if df is not None and not df.empty:
+            # Mostrar informações do DataFrame
+            st.write(f"Colunas disponíveis: {', '.join(df.columns)}")
+            st.write(f"Registros carregados: {len(df)}")
+            
             # Converter coluna de data para datetime usando o formato correto
             df['DATA'] = pd.to_datetime(df['DATA'], dayfirst=True)
             
