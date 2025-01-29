@@ -113,8 +113,7 @@ with st.container():
     SELECT *
     FROM "Basic"
     WHERE TO_DATE("DATA", 'DD/MM/YYYY') >= CURRENT_DATE - INTERVAL '{dias} days'
-    ORDER BY TO_DATE("DATA", 'DD/MM/YYYY') DESC
-    LIMIT 1000;
+    ORDER BY TO_DATE("DATA", 'DD/MM/YYYY') DESC;
     """
 
     # Carregar dados
