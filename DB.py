@@ -6,9 +6,6 @@ from datetime import datetime
 class DatabaseConnection:
     def __init__(self):
         try:
-            # Debug: mostrar todas as chaves disponíveis em st.secrets
-            st.write("Chaves disponíveis:", st.secrets.to_dict())
-            
             # Tentar conectar com Supabase
             url = st.secrets.supabase.url
             key = st.secrets.supabase.key
@@ -71,9 +68,6 @@ class DatabaseConnection:
             
             # Converter para DataFrame
             df = pd.DataFrame(response.data)
-            
-            # Debug: mostrar colunas disponíveis
-            st.write("Colunas disponíveis:", df.columns.tolist())
             
             # Converter valores monetários
             df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.convert_value)
