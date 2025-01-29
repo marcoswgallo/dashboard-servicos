@@ -43,6 +43,7 @@ class DatabaseConnection:
         except:
             return None
 
+    @st.cache_data(ttl=300)  # Cache por 5 minutos
     def execute_query(self, data_inicio, data_fim):
         """
         Executa query no banco de dados.
@@ -59,77 +60,82 @@ class DatabaseConnection:
                 st.error("Cliente Supabase não inicializado")
                 return None
             
-            # Fazer a consulta usando a API do Supabase com paginação
-            all_data = []
-            page = 1
-            page_size = 1000
-            
-            while True:
-                # Calcular o offset
-                offset = (page - 1) * page_size
+            with st.spinner('🔄 Carregando dados do banco...'):
+                # Fazer a consulta usando a API do Supabase com paginação
+                all_data = []
+                page = 1
+                page_size = 10000  # Aumentado para 10k registros por página
                 
-                # Fazer a consulta para a página atual
-                response = self.supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
-                
-                if not response.data:
-                    break
+                while True:
+                    # Calcular o offset
+                    offset = (page - 1) * page_size
                     
-                all_data.extend(response.data)
-                
-                # Se retornou menos que page_size registros, chegamos ao fim
-                if len(response.data) < page_size:
-                    break
+                    # Fazer a consulta para a página atual
+                    response = self.supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
                     
-                page += 1
+                    if not response.data:
+                        break
+                        
+                    all_data.extend(response.data)
+                    
+                    # Atualizar progresso
+                    st.write(f"📥 Carregados {len(all_data):,} registros...")
+                    
+                    # Se retornou menos que page_size registros, chegamos ao fim
+                    if len(response.data) < page_size:
+                        break
+                        
+                    page += 1
             
             if not all_data:
                 st.warning("Nenhum dado encontrado na tabela Basic")
                 return None
             
-            # Converter para DataFrame
-            df = pd.DataFrame(all_data)
-            
-            # Converter valores monetários
-            df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.convert_value)
-            df['VALOR_EMPRESA'] = df['VALOR EMPRESA'].apply(self.convert_value)
-            
-            # Remover colunas originais
-            df = df.drop(['VALOR TÉCNICO', 'VALOR EMPRESA'], axis=1)
-            
-            # Converter coordenadas para float
-            df['LATIDUDE'] = pd.to_numeric(df['LATIDUDE'], errors='coerce')
-            df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
-            
-            # Converter data para datetime
-            df['DATA'] = df['DATA'].apply(self.convert_date)
-            
-            # Remover registros com data inválida
-            df = df.dropna(subset=['DATA'])
-            
-            # Filtrar por data
-            data_inicio_dt = pd.to_datetime(data_inicio)
-            data_fim_dt = pd.to_datetime(data_fim)
-            df = df[(df['DATA'].dt.date >= data_inicio_dt.date()) & 
-                   (df['DATA'].dt.date <= data_fim_dt.date())]
-            
-            # Ordenar por data
-            df = df.sort_values('DATA', ascending=False)
-            
-            # Preencher valores nulos
-            df = df.fillna({
-                'SERVIÇO': '',
-                'CIDADES': '',
-                'TECNICO': '',
-                'BASE': '',
-                'STATUS': ''
-            })
-            
-            if len(df) == 0:
-                st.warning("Nenhum dado encontrado para o período selecionado")
-                return None
-            
-            st.info(f"📊 Total de registros carregados: {len(df):,}")
-            return df
+            with st.spinner('🔄 Processando dados...'):
+                # Converter para DataFrame
+                df = pd.DataFrame(all_data)
+                
+                # Converter valores monetários
+                df['VALOR_TÉCNICO'] = df['VALOR TÉCNICO'].apply(self.convert_value)
+                df['VALOR_EMPRESA'] = df['VALOR EMPRESA'].apply(self.convert_value)
+                
+                # Remover colunas originais
+                df = df.drop(['VALOR TÉCNICO', 'VALOR EMPRESA'], axis=1)
+                
+                # Converter coordenadas para float
+                df['LATIDUDE'] = pd.to_numeric(df['LATIDUDE'], errors='coerce')
+                df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
+                
+                # Converter data para datetime
+                df['DATA'] = df['DATA'].apply(self.convert_date)
+                
+                # Remover registros com data inválida
+                df = df.dropna(subset=['DATA'])
+                
+                # Filtrar por data
+                data_inicio_dt = pd.to_datetime(data_inicio)
+                data_fim_dt = pd.to_datetime(data_fim)
+                df = df[(df['DATA'].dt.date >= data_inicio_dt.date()) & 
+                       (df['DATA'].dt.date <= data_fim_dt.date())]
+                
+                # Ordenar por data
+                df = df.sort_values('DATA', ascending=False)
+                
+                # Preencher valores nulos
+                df = df.fillna({
+                    'SERVIÇO': '',
+                    'CIDADES': '',
+                    'TECNICO': '',
+                    'BASE': '',
+                    'STATUS': ''
+                })
+                
+                if len(df) == 0:
+                    st.warning("Nenhum dado encontrado para o período selecionado")
+                    return None
+                
+                st.success(f"✅ {len(df):,} registros carregados com sucesso!")
+                return df
                 
         except Exception as e:
             st.error(f"Erro ao executar query: {str(e)}")
