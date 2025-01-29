@@ -67,8 +67,13 @@ class DatabaseConnection:
                         # Calcular o offset
                         offset = (page - 1) * page_size
                         
-                        # Fazer a consulta para a página atual
-                        response = _supabase.table('Basic').select('*').range(offset, offset + page_size - 1).execute()
+                        # Fazer a consulta para a página atual com filtro de data
+                        response = (_supabase.table('Basic')
+                                  .select('*')
+                                  .gte('DATA', _data_inicio)
+                                  .lte('DATA', _data_fim)
+                                  .range(offset, offset + page_size - 1)
+                                  .execute())
                         
                         if not response.data:
                             break
@@ -122,12 +127,6 @@ class DatabaseConnection:
                 
                 # Remover registros com data inválida
                 df = df.dropna(subset=['DATA'])
-                
-                # Filtrar por data
-                data_inicio_dt = pd.to_datetime(data_inicio)
-                data_fim_dt = pd.to_datetime(data_fim)
-                df = df[(df['DATA'].dt.date >= data_inicio_dt.date()) & 
-                       (df['DATA'].dt.date <= data_fim_dt.date())]
                 
                 # Ordenar por data
                 df = df.sort_values('DATA', ascending=False)
