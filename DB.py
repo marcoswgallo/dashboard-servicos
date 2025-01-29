@@ -22,6 +22,12 @@ class DatabaseConnection:
                 'connect_timeout': 10
             }
             
+            # Debug - mostrar configurações (exceto senha)
+            st.write("Configurações de conexão:")
+            safe_config = self.config.copy()
+            safe_config['password'] = '****'
+            st.write(safe_config)
+            
         except Exception as e:
             st.error(f"❌ Erro ao carregar configurações: {str(e)}")
             raise e
@@ -33,10 +39,13 @@ class DatabaseConnection:
         try:
             # Tentar conexão direta primeiro
             try:
+                st.write("Tentando conexão principal...")
                 self.conn = psycopg2.connect(**self.config)
                 self.cursor = self.conn.cursor()
+                st.success("✅ Conexão principal estabelecida!")
                 return True
             except psycopg2.OperationalError as e:
+                st.warning(f"⚠️ Erro na conexão principal: {str(e)}")
                 # Se falhar, tentar conexão alternativa
                 st.warning("⚠️ Tentando conexão alternativa...")
                 password = quote_plus('RNupTzhk6d-3SZC')
@@ -50,6 +59,7 @@ class DatabaseConnection:
                 }
                 self.conn = psycopg2.connect(**alt_config)
                 self.cursor = self.conn.cursor()
+                st.success("✅ Conexão alternativa estabelecida!")
                 return True
                 
         except Exception as e:
@@ -62,17 +72,27 @@ class DatabaseConnection:
                 self.cursor.close()
             if self.conn:
                 self.conn.close()
+                st.write("Conexão encerrada")
         except Exception as e:
             st.error(f"Erro ao desconectar: {str(e)}")
 
     def execute_query(self, query: str) -> Optional[pd.DataFrame]:
         try:
+            st.write("Executando query:")
+            st.code(query, language='sql')
+            
             if not self.connect():
+                st.error("❌ Não foi possível estabelecer conexão com o banco")
                 return None
                 
             self.cursor.execute(query)
             columns = [desc[0] for desc in self.cursor.description]
             data = self.cursor.fetchall()
+            
+            st.write(f"Registros retornados: {len(data)}")
+            if len(data) == 0:
+                st.warning("⚠️ A query não retornou nenhum resultado")
+            
             df = pd.DataFrame(data, columns=columns)
             return df
         except Exception as e:
