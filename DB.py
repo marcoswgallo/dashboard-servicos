@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from supabase import create_client
+from supabase.client import create_client
 
 class DatabaseConnection:
     def __init__(self):
