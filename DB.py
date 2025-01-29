@@ -29,12 +29,15 @@ class DatabaseConnection:
             last_date = self.supabase.table('Basic').select('DATA').order('DATA', desc=True).limit(1).execute()
             
             if first_date.data and last_date.data:
+                # Converter as datas para datetime
+                self.first_date = pd.to_datetime(first_date.data[0]['DATA'], format='%d/%m/%Y %H:%M')
+                self.last_date = pd.to_datetime(last_date.data[0]['DATA'], format='%d/%m/%Y %H:%M')
+                
                 st.info(f"📅 Dados disponíveis de {first_date.data[0]['DATA']} até {last_date.data[0]['DATA']}")
-                # Guardar as datas para uso posterior
-                self.first_date = first_date.data[0]['DATA']
-                self.last_date = last_date.data[0]['DATA']
         except Exception as e:
             st.error(f"Erro ao verificar datas: {str(e)}")
+            self.first_date = None
+            self.last_date = None
 
     def convert_value(self, value):
         """Converte valor para float."""
@@ -74,7 +77,7 @@ class DatabaseConnection:
             DataFrame: Resultado da query ou None se houver erro
         """
         @st.cache_data(ttl=300)  # Cache por 5 minutos
-        def fetch_data(_supabase, _data_inicio, _data_fim):
+        def fetch_data(_supabase, _data_inicio, _data_fim, _first_date, _last_date):
             try:
                 with st.spinner('🔄 Carregando dados do banco...'):
                     # Fazer a consulta usando a API do Supabase com paginação
@@ -102,9 +105,18 @@ class DatabaseConnection:
                             st.error(f"Erro ao converter datas. Use formato DD/MM/YYYY ou YYYY-MM-DD: {str(e)}")
                             return None
                     
+                    # Validar se as datas estão dentro do período disponível
+                    if data_inicio_dt < _first_date:
+                        st.warning(f"⚠️ Data inicial ajustada para {_first_date.strftime('%d/%m/%Y %H:%M')} (primeiro registro disponível)")
+                        data_inicio_dt = _first_date
+                    
+                    if data_fim_dt > _last_date:
+                        st.warning(f"⚠️ Data final ajustada para {_last_date.strftime('%d/%m/%Y %H:%M')} (último registro disponível)")
+                        data_fim_dt = _last_date
+                    
                     # Converter para string no formato do banco (DD/MM/YYYY HH:MM)
-                    data_inicio_str = data_inicio_dt.strftime('%d/%m/%Y 00:00')
-                    data_fim_str = data_fim_dt.strftime('%d/%m/%Y 23:59')
+                    data_inicio_str = data_inicio_dt.strftime('%d/%m/%Y %H:%M')
+                    data_fim_str = data_fim_dt.strftime('%d/%m/%Y %H:%M')
                     
                     st.info(f"🔍 Buscando registros de {data_inicio_str} até {data_fim_str}")
                     
@@ -156,7 +168,7 @@ class DatabaseConnection:
                 return None
             
             # Buscar dados com cache
-            all_data = fetch_data(self.supabase, data_inicio, data_fim)
+            all_data = fetch_data(self.supabase, data_inicio, data_fim, self.first_date, self.last_date)
             
             if not all_data:
                 st.warning("Nenhum dado encontrado para o período selecionado")
