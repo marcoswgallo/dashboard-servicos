@@ -81,7 +81,7 @@ def load_data():
             df['VALOR EMPRESA'] = pd.to_numeric(df['VALOR EMPRESA'].str.replace(',', '.'), errors='coerce')
             
             # Converter coordenadas para numérico
-            df['LATITUDE'] = pd.to_numeric(df['LATITUDE'], errors='coerce')
+            df['LATIDUDE'] = pd.to_numeric(df['LATIDUDE'], errors='coerce')
             df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
             
             # Preencher valores nulos
@@ -214,7 +214,7 @@ if df is not None:
         df_filtered = df_filtered[df_filtered['STATUS'].isin(status)]
 
     # Remover linhas com coordenadas nulas ou inválidas
-    df_map = df_filtered.dropna(subset=['LATITUDE', 'LONGITUDE'])
+    df_map = df_filtered.dropna(subset=['LATIDUDE', 'LONGITUDE'])
     
     # Verificar se há dados para mostrar
     if not df_map.empty:
@@ -244,13 +244,13 @@ if df is not None:
             # Criar mapa de pontos
             fig = px.scatter_mapbox(
                 df_map,
-                lat='LATITUDE',
+                lat='LATIDUDE',
                 lon='LONGITUDE',
                 color='STATUS',
                 color_discrete_sequence=px.colors.qualitative.Set1,
                 hover_name='TECNICO',
                 hover_data={
-                    'LATITUDE': False,
+                    'LATIDUDE': False,
                     'LONGITUDE': False,
                     'DATA': True,
                     'SERVIÇO': True,
@@ -268,10 +268,10 @@ if df is not None:
             # Criar mapa de calor
             fig = px.density_mapbox(
                 df_map,
-                lat='LATITUDE',
+                lat='LATIDUDE',
                 lon='LONGITUDE',
                 radius=25,  # Raio um pouco menor
-                center=dict(lat=df_map['LATITUDE'].mean(), lon=df_map['LONGITUDE'].mean()),
+                center=dict(lat=df_map['LATIDUDE'].mean(), lon=df_map['LONGITUDE'].mean()),
                 zoom=10,
                 title='Localização dos Serviços - Mapa de Calor',
                 opacity=0.65,  # Reduzida a opacidade
@@ -284,7 +284,7 @@ if df is not None:
                 mapbox=dict(
                     style=style_map[map_style],
                     center=dict(
-                        lat=df_map['LATITUDE'].mean(),
+                        lat=df_map['LATIDUDE'].mean(),
                         lon=df_map['LONGITUDE'].mean()
                     ),
                     zoom=10,
@@ -309,7 +309,7 @@ if df is not None:
                 height=800,
                 mapbox=dict(
                     center=dict(
-                        lat=df_map['LATITUDE'].mean(),
+                        lat=df_map['LATIDUDE'].mean(),
                         lon=df_map['LONGITUDE'].mean()
                     ),
                     zoom=10,
