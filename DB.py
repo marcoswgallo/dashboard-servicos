@@ -2,25 +2,13 @@ import psycopg2
 import pandas as pd
 from typing import Optional
 import streamlit as st
-from supabase import create_client, Client
 
 class DatabaseConnection:
     def __init__(self):
         self.conn = None
         self.cursor = None
-        self.supabase: Optional[Client] = None
         
         try:
-            # Tentar carregar as configurações
-            if 'supabase' not in st.secrets:
-                st.error("❌ Configuração 'supabase' não encontrada nos secrets")
-                return
-            
-            # Inicializar cliente Supabase
-            supabase_url = st.secrets.supabase.url
-            supabase_key = st.secrets.supabase.key
-            self.supabase = create_client(supabase_url, supabase_key)
-            
             # Configurações do banco
             self.config = {
                 'dbname': 'postgres',
@@ -72,18 +60,6 @@ class DatabaseConnection:
             st.write("Executando query:")
             st.code(query, language='sql')
             
-            # Usar Supabase se disponível
-            if self.supabase:
-                try:
-                    response = self.supabase.rpc('execute_sql', {'sql_query': query}).execute()
-                    if response.data:
-                        df = pd.DataFrame(response.data)
-                        st.write(f"Registros retornados: {len(df)}")
-                        return df
-                except Exception as e:
-                    st.warning(f"⚠️ Erro ao usar Supabase, tentando conexão direta: {str(e)}")
-            
-            # Fallback para conexão direta
             if not self.connect():
                 st.error("❌ Não foi possível estabelecer conexão com o banco")
                 return None
