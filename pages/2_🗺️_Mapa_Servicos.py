@@ -64,8 +64,8 @@ def load_data():
         query = """
         SELECT *
         FROM "Basic"
-        WHERE "DATA" >= CURRENT_DATE - INTERVAL '30 days'
-        ORDER BY "DATA" DESC
+        WHERE TO_DATE("DATA", 'DD/MM/YYYY') >= CURRENT_DATE - INTERVAL '30 days'
+        ORDER BY TO_DATE("DATA", 'DD/MM/YYYY') DESC
         LIMIT 1000;
         """
         
