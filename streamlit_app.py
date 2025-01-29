@@ -63,8 +63,20 @@ def load_data():
         
     return df
 
-# Carregar dados
-df = load_data()
+# Carregar os dados
+try:
+    df = load_data()
+    if df is None:
+        st.error("Não foi possível conectar ao banco de dados. Verifique as configurações de conexão.")
+        st.stop()
+except Exception as e:
+    st.error(f"Erro ao carregar dados: {str(e)}")
+    st.stop()
+
+# Verificar se há dados
+if df.empty:
+    st.warning("Não há dados disponíveis para exibição.")
+    st.stop()
 
 # Título
 st.title("📈 Dashboard de Análise")
