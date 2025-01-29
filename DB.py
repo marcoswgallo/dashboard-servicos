@@ -2,31 +2,22 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 from datetime import datetime
-import os
 
 class DatabaseConnection:
     def __init__(self):
         try:
-            # Verificar se está rodando no Streamlit Cloud
-            is_cloud = os.getenv('STREAMLIT_SHARING_MODE') is not None
+            # Debug: mostrar todas as chaves disponíveis em st.secrets
+            st.write("Chaves disponíveis:", st.secrets.to_dict())
             
-            if is_cloud:
-                # No Streamlit Cloud, usa as secrets configuradas
-                url = st.secrets["supabase"]["url"]
-                key = st.secrets["supabase"]["key"]
-            else:
-                # Localmente, tenta usar variáveis de ambiente
-                url = os.getenv("SUPABASE_URL")
-                key = os.getenv("SUPABASE_KEY")
-                
-                if not url or not key:
-                    st.warning("⚠️ Rodando localmente: Configure as variáveis de ambiente SUPABASE_URL e SUPABASE_KEY ou crie um arquivo .streamlit/secrets.toml")
-                    return
+            # Tentar conectar com Supabase
+            url = st.secrets.supabase.url
+            key = st.secrets.supabase.key
             
             self.supabase = create_client(url, key)
+            st.success("✅ Conexão com Supabase estabelecida com sucesso!")
             
         except Exception as e:
-            st.error(f"Erro ao conectar ao banco de dados: {str(e)}")
+            st.error(f"❌ Erro ao conectar ao banco de dados: {str(e)}")
             self.supabase = None
 
     def convert_value(self, value):
