@@ -12,22 +12,20 @@ class DatabaseConnection:
                 st.error("Configuração 'postgres' não encontrada nos secrets")
                 return
             
-            # Mostrar as chaves disponíveis (sem mostrar os valores)
-            st.write("Chaves disponíveis:", list(st.secrets.postgres.keys()))
-            
-            # Configurações diretas do psycopg2
+            # Configurações do banco
             self.config = {
-                'dbname': 'postgres',
-                'user': 'postgres',
-                'password': 'Basic@2024',
-                'host': 'db.vdmzeeewpzfpgmnaabfw.supabase.co',
-                'port': '5432'
+                'dbname': st.secrets.postgres.database,
+                'user': st.secrets.postgres.user,
+                'password': st.secrets.postgres.password,
+                'host': st.secrets.postgres.host,
+                'port': st.secrets.postgres.port
             }
             
             st.write(f"Tentando conectar em: {self.config['host']}:{self.config['port']}/{self.config['dbname']} com usuário {self.config['user']}")
             
         except Exception as e:
             st.error(f"Erro ao carregar configurações: {str(e)}")
+            raise e
         
         self.conn = None
         self.cursor = None
@@ -35,7 +33,13 @@ class DatabaseConnection:
     def connect(self):
         try:
             st.write("Iniciando conexão...")
-            self.conn = psycopg2.connect(**self.config)
+            self.conn = psycopg2.connect(
+                dbname=self.config['dbname'],
+                user=self.config['user'],
+                password=self.config['password'],
+                host=self.config['host'],
+                port=self.config['port']
+            )
             self.cursor = self.conn.cursor()
             st.success("✅ Conexão bem sucedida!")
         except Exception as e:
