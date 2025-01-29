@@ -43,6 +43,9 @@ with st.container():
     df = db.execute_query(data_inicio_str, data_fim_str)
     
     if df is not None:
+        # Remover linhas com coordenadas nulas ou inválidas
+        df = df.dropna(subset=['LATIDUDE', 'LONGITUDE'])
+        
         # Mapeamento de bases para tipos
         base_tipos = {
             'Instalação': [
@@ -120,13 +123,16 @@ with st.container():
                 'LATIDUDE': False,
                 'LONGITUDE': False
             },
-            zoom=10,
+            zoom=5,  # Zoom mais distante para ver todos os pontos
             height=600
         )
 
         # Atualizar layout do mapa
         fig.update_layout(
             mapbox_style="carto-positron",
+            mapbox=dict(
+                center=dict(lat=-22.9, lon=-47.0),  # Centro em Campinas-SP
+            ),
             margin={"r":0,"t":0,"l":0,"b":0}
         )
 
@@ -150,39 +156,24 @@ with st.container():
                 y='TECNICO',
                 orientation='h',
                 title='Serviços por Técnico',
-                text='Total'
+                labels={'Total': 'Quantidade de Serviços', 'TECNICO': 'Técnico'}
             )
-            
-            fig_tec.update_layout(
-                showlegend=False,
-                xaxis_title="",
-                yaxis_title="",
-                height=400
-            )
-            
             st.plotly_chart(fig_tec, use_container_width=True)
-            
+        
         with col2:
-            # Gráfico de serviços por hora
-            df['HORA'] = pd.to_datetime(df['DATA']).dt.hour
-            demanda_hora = df.groupby('HORA').size().reset_index(name='Total')
+            # Gráfico de serviços por cidade
+            df_cidade = df.groupby('CIDADES').size().reset_index(name='Total')
+            df_cidade = df_cidade.sort_values('Total', ascending=True)
             
-            fig_hora = px.bar(
-                demanda_hora,
-                x='HORA',
-                y='Total',
-                title='Demanda por Hora',
-                text='Total'
+            fig_cidade = px.bar(
+                df_cidade,
+                x='Total',
+                y='CIDADES',
+                orientation='h',
+                title='Serviços por Cidade',
+                labels={'Total': 'Quantidade de Serviços', 'CIDADES': 'Cidade'}
             )
-            
-            fig_hora.update_layout(
-                showlegend=False,
-                xaxis_title="Hora do Dia",
-                yaxis_title="",
-                height=400
-            )
-            
-            st.plotly_chart(fig_hora, use_container_width=True)
+            st.plotly_chart(fig_cidade, use_container_width=True)
             
         # Tabela de dados
         st.markdown("### 📋 Dados Detalhados")
