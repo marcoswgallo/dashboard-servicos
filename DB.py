@@ -1,18 +1,37 @@
 import psycopg2
 import pandas as pd
 from typing import Optional
+import streamlit as st
 from urllib.parse import quote_plus
 
 class DatabaseConnection:
     def __init__(self):
-        password = quote_plus('RNupTzhk6d-3SZC')
-        self.connection_string = f"postgresql://postgres:{password}@db.vdmzeeewpzfpgmnaabfw.supabase.co:5432/postgres"
+        try:
+            # Tentar pegar as configurações do Streamlit primeiro
+            self.config = {
+                'host': st.secrets['postgres']['host'],
+                'port': st.secrets['postgres']['port'],
+                'database': st.secrets['postgres']['database'],
+                'user': st.secrets['postgres']['user'],
+                'password': st.secrets['postgres']['password']
+            }
+        except Exception as e:
+            # Se não encontrar no Streamlit, usar configuração local
+            password = quote_plus('RNupTzhk6d-3SZC')
+            self.config = {
+                'host': 'db.vdmzeeewpzfpgmnaabfw.supabase.co',
+                'port': 5432,
+                'database': 'postgres',
+                'user': 'postgres',
+                'password': password
+            }
+        
         self.conn = None
         self.cursor = None
 
     def connect(self):
         try:
-            self.conn = psycopg2.connect(self.connection_string)
+            self.conn = psycopg2.connect(**self.config)
             self.cursor = self.conn.cursor()
             print("Conexão bem sucedida!")
         except Exception as e:
