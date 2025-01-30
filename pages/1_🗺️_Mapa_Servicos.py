@@ -15,8 +15,12 @@ st.set_page_config(
 # Título
 st.title("🗺️ Mapa de Serviços")
 
-# Inicializar conexão com banco
-db = DatabaseConnection()
+# Container para status
+status_container = st.empty()
+
+with st.spinner('Conectando ao banco de dados...'):
+    # Inicializar conexão com banco
+    db = DatabaseConnection()
 
 # Filtros na sidebar
 st.sidebar.title("🎯 Filtros")
@@ -38,8 +42,12 @@ with col2:
         help="Formato: DD/MM/YYYY"
     )
 
-# Carregar dados
-df = db.execute_query(data_inicio, data_fim)
+# Container para dados
+data_container = st.empty()
+
+with st.spinner('Carregando dados...'):
+    # Carregar dados
+    df = db.execute_query(data_inicio, data_fim)
 
 # Filtros adicionais na sidebar
 col1, col2 = st.sidebar.columns(2)
@@ -70,28 +78,33 @@ if not df.empty:
     if tecnicos:
         df = df[df["TECNICO"].isin(tecnicos)]
 
-    # Criar mapa base
-    m = folium.Map(
-        location=[-23.5505, -46.6333],  # São Paulo
-        zoom_start=10
-    )
+    # Container para mapa
+    map_container = st.empty()
 
-    # Adicionar marcadores apenas para coordenadas válidas
-    for idx, row in df.iterrows():
-        if pd.notna(row["LATIDUDE"]) and pd.notna(row["LONGITUDE"]):
-            folium.Marker(
-                [row["LATIDUDE"], row["LONGITUDE"]],
-                popup=f"""
-                <b>Cidade:</b> {row["CIDADES"] if pd.notna(row["CIDADES"]) else "N/A"}<br>
-                <b>Técnico:</b> {row["TECNICO"] if pd.notna(row["TECNICO"]) else "N/A"}<br>
-                <b>Data:</b> {row["DATA_TOA"].strftime("%d/%m/%Y %H:%M") if pd.notna(row["DATA_TOA"]) else "N/A"}<br>
-                <b>Serviço:</b> {row["SERVIÇO"] if pd.notna(row["SERVIÇO"]) else "N/A"}<br>
-                <b>Status:</b> {row["STATUS"] if pd.notna(row["STATUS"]) else "N/A"}<br>
-                """
-            ).add_to(m)
+    with st.spinner('Gerando mapa...'):
+        # Criar mapa base
+        m = folium.Map(
+            location=[-23.5505, -46.6333],  # São Paulo
+            zoom_start=10
+        )
 
-    # Exibir mapa usando st_folium
-    map_data = st_folium(m, width=1200, height=600, returned_objects=[])
+        # Adicionar marcadores apenas para coordenadas válidas
+        for idx, row in df.iterrows():
+            if pd.notna(row["LATIDUDE"]) and pd.notna(row["LONGITUDE"]):
+                folium.Marker(
+                    [row["LATIDUDE"], row["LONGITUDE"]],
+                    popup=f"""
+                    <b>Cidade:</b> {row["CIDADES"] if pd.notna(row["CIDADES"]) else "N/A"}<br>
+                    <b>Técnico:</b> {row["TECNICO"] if pd.notna(row["TECNICO"]) else "N/A"}<br>
+                    <b>Data:</b> {row["DATA_TOA"].strftime("%d/%m/%Y %H:%M") if pd.notna(row["DATA_TOA"]) else "N/A"}<br>
+                    <b>Serviço:</b> {row["SERVIÇO"] if pd.notna(row["SERVIÇO"]) else "N/A"}<br>
+                    <b>Status:</b> {row["STATUS"] if pd.notna(row["STATUS"]) else "N/A"}<br>
+                    """
+                ).add_to(m)
+
+        # Exibir mapa usando st_folium
+        with map_container:
+            map_data = st_folium(m, width=1200, height=600, returned_objects=[])
 
     # Métricas
     st.subheader("📊 Métricas")
