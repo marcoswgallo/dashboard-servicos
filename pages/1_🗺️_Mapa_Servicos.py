@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from datetime import datetime, timedelta
 from excel_db import ExcelConnection
+from folium.plugins import MarkerCluster
 
 # Configuração da página
 st.set_page_config(
@@ -85,26 +86,58 @@ if not df.empty:
         # Criar mapa base
         m = folium.Map(
             location=[-23.5505, -46.6333],  # São Paulo
-            zoom_start=10
+            zoom_start=10,
+            prefer_canvas=True  # Usar canvas para melhor performance
+        )
+        
+        # Criar cluster de marcadores
+        marker_cluster = MarkerCluster(
+            name="Serviços",
+            overlay=True,
+            control=True,
+            icon_create_function=None
         )
 
-        # Adicionar marcadores apenas para coordenadas válidas
-        for idx, row in df.iterrows():
-            if pd.notna(row["LATIDUDE"]) and pd.notna(row["LONGITUDE"]):
-                folium.Marker(
-                    [row["LATIDUDE"], row["LONGITUDE"]],
-                    popup=f"""
-                    <b>Cidade:</b> {row["CIDADES"] if pd.notna(row["CIDADES"]) else "N/A"}<br>
-                    <b>Técnico:</b> {row["TECNICO"] if pd.notna(row["TECNICO"]) else "N/A"}<br>
-                    <b>Data:</b> {row["DATA_TOA"].strftime("%d/%m/%Y %H:%M") if pd.notna(row["DATA_TOA"]) else "N/A"}<br>
-                    <b>Serviço:</b> {row["SERVIÇO"] if pd.notna(row["SERVIÇO"]) else "N/A"}<br>
-                    <b>Status:</b> {row["STATUS"] if pd.notna(row["STATUS"]) else "N/A"}<br>
-                    """
-                ).add_to(m)
+        # Filtrar apenas registros com coordenadas válidas
+        df_map = df[pd.notna(df["LATIDUDE"]) & pd.notna(df["LONGITUDE"])].copy()
+        
+        # Limitar número de marcadores se necessário
+        max_markers = 1000
+        if len(df_map) > max_markers:
+            st.warning(f"⚠️ Limitando visualização aos {max_markers} serviços mais recentes para melhor performance")
+            df_map = df_map.nlargest(max_markers, "DATA_TOA")
+
+        # Adicionar marcadores ao cluster
+        for idx, row in df_map.iterrows():
+            folium.Marker(
+                [row["LATIDUDE"], row["LONGITUDE"]],
+                popup=f"""
+                <b>Cidade:</b> {row["CIDADES"] if pd.notna(row["CIDADES"]) else "N/A"}<br>
+                <b>Técnico:</b> {row["TECNICO"] if pd.notna(row["TECNICO"]) else "N/A"}<br>
+                <b>Data:</b> {row["DATA_TOA"].strftime("%d/%m/%Y %H:%M") if pd.notna(row["DATA_TOA"]) else "N/A"}<br>
+                <b>Serviço:</b> {row["SERVIÇO"] if pd.notna(row["SERVIÇO"]) else "N/A"}<br>
+                <b>Status:</b> {row["STATUS"] if pd.notna(row["STATUS"]) else "N/A"}<br>
+                """
+            ).add_to(marker_cluster)
+
+        # Adicionar cluster ao mapa
+        marker_cluster.add_to(m)
+
+        # Ajustar zoom para mostrar todos os marcadores
+        if not df_map.empty:
+            sw = df_map[["LATIDUDE", "LONGITUDE"]].min().values.tolist()
+            ne = df_map[["LATIDUDE", "LONGITUDE"]].max().values.tolist()
+            m.fit_bounds([sw, ne])
 
         # Exibir mapa usando st_folium
         with map_container:
-            map_data = st_folium(m, width=1200, height=600, returned_objects=[])
+            map_data = st_folium(
+                m,
+                width=1200,
+                height=600,
+                returned_objects=[],
+                use_container_width=True
+            )
 
     # Métricas
     st.subheader("📊 Métricas")
@@ -120,8 +153,7 @@ if not df.empty:
         st.metric("Técnicos em Campo", len(df["TECNICO"].unique()))
     
     with col4:
-        st.metric("Serviços com Coordenadas", 
-                 df[pd.notna(df["LATIDUDE"]) & pd.notna(df["LONGITUDE"])].shape[0])
+        st.metric("Serviços com Coordenadas", len(df_map))
 
 else:
     st.warning("⚠️ Nenhum dado encontrado para o período selecionado")
