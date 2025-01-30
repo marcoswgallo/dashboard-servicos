@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import folium
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 from datetime import datetime, timedelta
 from DB import DatabaseConnection
 
@@ -91,7 +91,7 @@ if not df.empty:
             ).add_to(m)
 
     # Exibir mapa
-    folium_static(m, width=1200)
+    st_folium(m, width=1200)
 
     # Métricas
     st.subheader("📊 Métricas")
