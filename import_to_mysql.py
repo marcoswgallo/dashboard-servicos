@@ -1,34 +1,20 @@
 import pandas as pd
-import pymysql
-from sqlalchemy import create_engine
-import streamlit as st
 import time
 
-def import_excel_to_mysql():
+def excel_to_csv():
+    """Converte Excel para CSV para importação no PythonAnywhere"""
     try:
-        print("🔄 Iniciando importação...")
+        print(" Iniciando conversão Excel para CSV...")
         start_time = time.time()
         
-        # Ler configurações do MySQL
-        db_config = st.secrets["mysql"]
-        
-        # Criar string de conexão
-        connection_string = (
-            f"mysql+pymysql://{db_config['user']}:{db_config['password']}"
-            f"@{db_config['host']}/{db_config['database']}"
-        )
-        
-        # Criar engine
-        engine = create_engine(connection_string)
-        
-        print("📊 Lendo arquivo Excel...")
+        print(" Lendo arquivo Excel...")
         # Ler o Excel
         df = pd.read_excel(
             "data/servicos.xlsx",
             parse_dates=["DATA_TOA"]
         )
         
-        print(f"📝 Encontrados {len(df)} registros")
+        print(f" Encontrados {len(df)} registros")
         
         # Renomear colunas para o padrão MySQL
         df = df.rename(columns={
@@ -38,32 +24,51 @@ def import_excel_to_mysql():
         })
         
         # Limpar dados
-        print("🧹 Limpando dados...")
+        print(" Limpando dados...")
         for col in df.columns:
             if df[col].dtype == 'object':
                 df[col] = df[col].astype(str).str.strip()
         
-        # Criar tabela e importar dados
-        print("⬆️ Importando dados para o MySQL...")
-        df.to_sql(
-            'servicos',
-            engine,
-            if_exists='replace',
-            index=False,
-            chunksize=1000
-        )
+        # Converter datas para formato MySQL
+        df['DATA_TOA'] = df['DATA_TOA'].dt.strftime('%Y-%m-%d %H:%M:%S')
         
-        # Criar índice
-        with engine.connect() as conn:
-            conn.execute("CREATE INDEX idx_data_toa ON servicos(DATA_TOA);")
-            conn.execute("ALTER TABLE servicos ADD PRIMARY KEY (id);")
-            
+        # Salvar como CSV
+        print(" Salvando arquivo CSV...")
+        csv_path = "data/servicos_mysql.csv"
+        df.to_csv(csv_path, index=False)
+        
         end_time = time.time()
-        print(f"✅ Importação concluída em {end_time - start_time:.2f} segundos!")
-        print(f"📊 Total de registros importados: {len(df)}")
+        print(f" Conversão concluída em {end_time - start_time:.2f} segundos!")
+        print(f" Total de registros convertidos: {len(df)}")
+        print("\nAgora você pode:")
+        print("1. Fazer upload do arquivo 'data/servicos_mysql.csv' para o PythonAnywhere")
+        print("2. No MySQL do PythonAnywhere, criar a tabela com:")
+        print("""
+CREATE TABLE servicos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    DATA_TOA DATETIME,
+    TECNICO VARCHAR(100),
+    CIDADES VARCHAR(100),
+    SERVICO VARCHAR(200),
+    STATUS VARCHAR(50),
+    LATITUDE DECIMAL(10, 8),
+    LONGITUDE DECIMAL(11, 8),
+    INDEX idx_data_toa (DATA_TOA)
+);
+        """)
+        print("3. Importar o CSV com:")
+        print("""
+LOAD DATA LOCAL INFILE 'servicos_mysql.csv'
+INTO TABLE servicos
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\\n'
+IGNORE 1 ROWS
+(DATA_TOA, TECNICO, CIDADES, SERVICO, STATUS, LATITUDE, LONGITUDE);
+        """)
         
     except Exception as e:
-        print(f"❌ Erro durante importação: {str(e)}")
+        print(f" Erro durante conversão: {str(e)}")
 
 if __name__ == "__main__":
-    import_excel_to_mysql()
+    excel_to_csv()
