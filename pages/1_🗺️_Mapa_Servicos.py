@@ -90,8 +90,8 @@ if not df.empty:
                 """
             ).add_to(m)
 
-    # Exibir mapa
-    st_folium(m, width=1200)
+    # Exibir mapa usando st_folium
+    map_data = st_folium(m, width=1200, height=600, returned_objects=[])
 
     # Métricas
     st.subheader("📊 Métricas")
@@ -101,14 +101,14 @@ if not df.empty:
         st.metric("Total de Serviços", len(df))
     
     with col2:
-        st.metric("Cidades Atendidas", len(df["CIDADES"].dropna().unique()))
+        st.metric("Cidades Atendidas", len(df["CIDADES"].unique()))
     
     with col3:
-        st.metric("Técnicos Ativos", len(df["TECNICO"].dropna().unique()))
+        st.metric("Técnicos em Campo", len(df["TECNICO"].unique()))
     
     with col4:
-        concluidos = len(df[df["STATUS"].str.contains("Concluído", case=False, na=False)])
-        st.metric("Serviços Concluídos", concluidos)
+        st.metric("Serviços com Coordenadas", 
+                 df[pd.notna(df["LATIDUDE"]) & pd.notna(df["LONGITUDE"])].shape[0])
 
 else:
-    st.warning("⚠️ Nenhum dado encontrado para o período selecionado. Tente ajustar as datas do filtro.")
+    st.warning("⚠️ Nenhum dado encontrado para o período selecionado")
