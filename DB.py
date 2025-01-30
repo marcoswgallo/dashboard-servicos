@@ -26,18 +26,18 @@ class DatabaseConnection:
             st.stop()
     
     @st.cache_data(ttl=3600)  # Cache por 1 hora
-    def check_date_range(self):
+    def check_date_range(_self):
         """Verifica o range de datas disponível no banco."""
         try:
-            first_date, last_date = self.get_date_range()
+            first_date, last_date = _self.get_date_range()
             st.info(f"📅 Dados disponíveis de {first_date.strftime('%d/%m/%Y %H:%M')} até {last_date.strftime('%d/%m/%Y %H:%M')}")
         except Exception as e:
             st.error(f"❌ Erro ao verificar datas: {str(e)}")
     
     @st.cache_data(ttl=3600)  # Cache por 1 hora
-    def get_date_range(self):
+    def get_date_range(_self):
         try:
-            with self.engine.connect() as conn:
+            with _self.engine.connect() as conn:
                 query = text("""
                     SELECT 
                         MIN("DATA_TOA")::timestamp as first_date,
@@ -70,14 +70,14 @@ class DatabaseConnection:
             return None
     
     @st.cache_data(ttl=300)  # Cache por 5 minutos
-    def execute_query(self, start_date, end_date):
+    def execute_query(_self, start_date, end_date):
         """Executa query no banco de dados com otimizações."""
         empty_df = pd.DataFrame(columns=["DATA_TOA", "TECNICO", "CIDADES", "SERVIÇO", "STATUS", "LATIDUDE", "LONGITUDE"])
         
         try:
             # Converter datas
-            start = self.parse_date(start_date)
-            end = self.parse_date(end_date)
+            start = _self.parse_date(start_date)
+            end = _self.parse_date(end_date)
             
             if not start or not end:
                 st.warning("⚠️ Datas inválidas fornecidas.")
@@ -110,7 +110,7 @@ class DatabaseConnection:
                 start_time = time.time()
                 
                 # Executar query
-                with self.engine.connect() as conn:
+                with _self.engine.connect() as conn:
                     result = pd.read_sql_query(
                         query,
                         conn,
