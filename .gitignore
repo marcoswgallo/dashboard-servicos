@@ -37,7 +37,8 @@ ENV/
 .streamlit/secrets.toml
 
 # Project specific
-*.xlsx
+!data/
+!data/*.xlsx
 *.csv
 *.db
 *.sqlite3
