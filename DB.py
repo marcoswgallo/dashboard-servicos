@@ -13,6 +13,14 @@ class DatabaseConnection:
             # Criar engine SQLAlchemy
             self.engine = create_engine(self.url, pool_size=5, max_overflow=10)
             
+            # Criar índice se não existir
+            with self.engine.connect() as conn:
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_data_toa 
+                    ON basic("DATA_TOA");
+                """))
+                conn.commit()
+            
             # Testar conexão
             with self.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
