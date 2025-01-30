@@ -3,7 +3,7 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from datetime import datetime, timedelta
-from DB import DatabaseConnection
+from excel_db import ExcelConnection
 
 # Configuração da página
 st.set_page_config(
@@ -18,9 +18,9 @@ st.title("🗺️ Mapa de Serviços")
 # Container para status
 status_container = st.empty()
 
-with st.spinner('Conectando ao banco de dados...'):
-    # Inicializar conexão com banco
-    db = DatabaseConnection()
+with st.spinner('Conectando ao Excel...'):
+    # Inicializar conexão com Excel
+    db = ExcelConnection()
 
 # Filtros na sidebar
 st.sidebar.title("🎯 Filtros")
