@@ -27,6 +27,13 @@ class DatabaseConnection:
     def check_date_range(self):
         """Verifica o range de datas disponível no banco."""
         try:
+            first_date, last_date = self.get_date_range()
+            st.info(f"📅 Dados disponíveis de {first_date.strftime('%d/%m/%Y %H:%M')} até {last_date.strftime('%d/%m/%Y %H:%M')}")
+        except Exception as e:
+            st.error(f"❌ Erro ao verificar datas: {str(e)}")
+    
+    def get_date_range(self):
+        try:
             with self.engine.connect() as conn:
                 # Consulta para pegar primeira e última data
                 query = text("""
@@ -40,14 +47,13 @@ class DatabaseConnection:
                 if result and result[0] and result[1]:
                     first_date = result[0]
                     last_date = result[1]
-                    
-                    st.info(f"📅 Dados disponíveis de {first_date.strftime(%d/%m/%Y %H:%M)} "
-                           f"até {last_date.strftime(%d/%m/%Y %H:%M)}")
+                    return first_date, last_date
                 else:
                     st.warning("⚠️ Não foi possível determinar o range de datas disponível")
-                
+                    return None, None
         except Exception as e:
             st.error(f"❌ Erro ao verificar datas: {str(e)}")
+            return None, None
     
     def parse_date(self, date_str):
         """Converte string de data para datetime."""
