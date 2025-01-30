@@ -87,21 +87,21 @@ class DatabaseConnection:
             if len(end_date) <= 10:
                 end = end.replace(hour=23, minute=59, second=59)
             
-            # Query otimizada selecionando apenas as colunas necessárias
+            # Query otimizada selecionando apenas colunas necessárias e usando índices
             query = text("""
-                SELECT 
-                    "DATA_TOA",
-                    "TECNICO",
-                    "CIDADES",
-                    "SERVIÇO",
-                    "STATUS",
-                    "LATIDUDE",
-                    "LONGITUDE",
-                    "VALOR TÉCNICO",
-                    "VALOR EMPRESA"
-                FROM basic
-                WHERE "DATA_TOA"::timestamp 
-                    BETWEEN :start_date AND :end_date
+                WITH filtered_data AS (
+                    SELECT 
+                        "DATA_TOA"::timestamp,
+                        "TECNICO",
+                        "CIDADES",
+                        "SERVIÇO",
+                        "STATUS",
+                        "LATIDUDE"::float,
+                        "LONGITUDE"::float
+                    FROM basic 
+                    WHERE "DATA_TOA"::timestamp BETWEEN :start_date AND :end_date
+                )
+                SELECT * FROM filtered_data
                 ORDER BY "DATA_TOA"
             """)
             
@@ -111,6 +111,10 @@ class DatabaseConnection:
                 
                 # Executar query
                 with _self.engine.connect() as conn:
+                    # Configurar a conexão para fetch mais rápido
+                    conn.execution_options(stream_results=True)
+                    
+                    # Usar método mais eficiente de leitura
                     result = pd.read_sql_query(
                         query,
                         conn,
@@ -118,17 +122,24 @@ class DatabaseConnection:
                             "start_date": start.strftime("%Y-%m-%d %H:%M:%S"),
                             "end_date": end.strftime("%Y-%m-%d %H:%M:%S")
                         },
-                        parse_dates=["DATA_TOA"]
+                        parse_dates=["DATA_TOA"],
+                        chunksize=10000  # Processar em chunks para memória
                     )
+                    
+                    # Concatenar chunks
+                    if isinstance(result, pd.DataFrame):
+                        df = result
+                    else:
+                        df = pd.concat(result, ignore_index=True)
                 
                 end_time = time.time()
-                if not result.empty:
+                if not df.empty:
                     st.success(f"✅ Dados carregados em {end_time - start_time:.2f} segundos")
                 else:
                     st.warning("⚠️ Nenhum dado encontrado para o período selecionado.")
                     return empty_df
             
-            return result
+            return df
             
         except Exception as e:
             st.error(f"❌ Erro ao carregar dados: {str(e)}")
